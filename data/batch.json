@@ -1,0 +1,29 @@
+[
+  {
+    "client_name": "ACME Corporation AB",
+    "client_email": "billing@acme.example.com",
+    "invoice_number": "2025-001",
+    "invoice_date": "2025-11-09",
+    "daily_rate": 213,
+    "days": 7,
+    "notes": "Q4 consulting services - Phase 1"
+  },
+  {
+    "client_name": "Globex Industries",
+    "client_email": "accounts@globex.example.com",
+    "invoice_number": "2025-002",
+    "invoice_date": "2025-11-10",
+    "daily_rate": 250,
+    "days": 5,
+    "notes": "System architecture review and recommendations"
+  },
+  {
+    "client_name": "Initech Ltd",
+    "client_email": "finance@initech.example.com",
+    "invoice_number": "2025-003",
+    "invoice_date": "2025-11-15",
+    "daily_rate": 200,
+    "days": 10,
+    "notes": ""
+  }
+]

@@ -1,0 +1,4 @@
+client_name,client_email,invoice_number,invoice_date,daily_rate,days,notes
+"ACME Corporation AB","billing@acme.example.com","2025-001","2025-11-09",213,7,"Q4 consulting services - Phase 1"
+"Globex Industries","accounts@globex.example.com","2025-002","2025-11-10",250,5,"System architecture review"
+"Initech Ltd","finance@initech.example.com","2025-003","2025-11-15",200,10,""

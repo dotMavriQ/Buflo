@@ -1,0 +1,28 @@
+# Output files
+out/
+*.pdf
+
+# Temporary files
+*.tmp
+/tmp/
+*.html.tmp
+
+# State files
+.config/
+
+# Lua bytecode
+*.luac
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
