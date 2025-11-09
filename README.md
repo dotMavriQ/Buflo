@@ -776,3 +776,5 @@ The profile editor features a dark theme with:
 - **Status bar** at bottom showing line/col, total lines, and modified status
 
 All accessible from the welcome screen via "Create New Profile" or "Edit Profile" buttons!
+
+https://github.com/dotMavriQ/Buflo/blob/main/buflo.png?raw=true
