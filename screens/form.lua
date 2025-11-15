@@ -3,6 +3,7 @@
 local form = {}
 local ui = require("lib.ui")
 local parser_v2 = require("buflo.core.buflo_v2_parser")
+local invoice_template = require("buflo.rendering.invoice_template")
 
 -- State
 local profile_name = ""
@@ -106,97 +107,8 @@ end
 
 -- Generate HTML preview from field values
 local function generate_html_preview()
-    local html = [[
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>]] .. (profile_data.document and profile_data.document.title or "Invoice Preview") .. [[</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 20px;
-            background: #fff;
-        }
-        h1 {
-            color: #333;
-            border-bottom: 3px solid #4396F8;
-            padding-bottom: 10px;
-        }
-        .section {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f9f9f9;
-            border-left: 4px solid #4396F8;
-        }
-        .section h2 {
-            color: #4396F8;
-            margin-top: 0;
-        }
-        .field {
-            margin: 15px 0;
-            padding: 10px;
-            background: white;
-            border: 1px solid #ddd;
-        }
-        .field-label {
-            font-weight: bold;
-            color: #666;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-        .field-value {
-            color: #333;
-            font-size: 16px;
-            margin-top: 5px;
-        }
-        .field-value.empty {
-            color: #999;
-            font-style: italic;
-        }
-        .columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        @media print {
-            body { margin: 0; }
-            .section { page-break-inside: avoid; }
-        }
-    </style>
-</head>
-<body>
-    <h1>]] .. (profile_data.document and profile_data.document.title or "Invoice Preview") .. [[</h1>
-]]
-
-    -- Get all fields in order
-    local all_fields = parser_v2.get_all_fields(profile_data)
-
-    -- Group fields by section (simplified - just show all fields)
-    for i, field in ipairs(all_fields) do
-        if field.id and field.type ~= "spacer" then
-            local label = field.label or field.id
-            local value = field_values[field.id] or ""
-            local is_empty = value == "" or value == nil
-
-            html = html .. [[
-    <div class="field">
-        <div class="field-label">]] .. label .. [[</div>
-        <div class="field-value]] .. (is_empty and " empty" or "") .. [[">]] ..
-            (is_empty and "(Not filled)" or value) .. [[</div>
-    </div>
-]]
-        end
-    end
-
-    html = html .. [[
-</body>
-</html>
-]]
-
-    return html
+    -- Use the new invoice template renderer
+    return invoice_template.generate_invoice_html(profile_data, field_values)
 end
 
 -- Validate current page fields
