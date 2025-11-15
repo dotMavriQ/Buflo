@@ -287,6 +287,11 @@ function ui.dropdown(id, items, selected_index, x, y, w, h)
         clicked = true
     end
 
+    -- Reset active state when mouse released
+    if ui.active_widget == id and not love.mouse.isDown(1) then
+        ui.active_widget = nil
+    end
+
     -- Draw dropdown box
     love.graphics.setColor(bg_color)
     love.graphics.rectangle("fill", x, y, w, h, 4, 4)

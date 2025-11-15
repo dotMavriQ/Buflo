@@ -77,6 +77,12 @@ function love.wheelmoved(x, y)
     end
 end
 
+function love.filedropped(file)
+    if screens[current_screen].filedropped then
+        screens[current_screen].filedropped(file)
+    end
+end
+
 -- Screen switching
 function switchScreen(screen_name, data)
     current_screen = screen_name

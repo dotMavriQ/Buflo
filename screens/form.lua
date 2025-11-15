@@ -14,6 +14,7 @@ local form_pages = {}
 local current_page = 1
 local field_values = {}
 local validation_errors = {}
+local all_fields = {}  -- Store all fields for access in callbacks
 
 function form.load(data)
     data = data or {}
@@ -36,7 +37,7 @@ function form.load(data)
 
             if profile_data then
                 -- Get all fields - we'll paginate dynamically based on screen height
-                local all_fields = parser.get_all_fields(profile_data)
+                all_fields = parser.get_all_fields(profile_data)
 
                 -- Dynamic pagination based on available screen height
                 form_pages = create_dynamic_pages(all_fields)
@@ -193,15 +194,11 @@ local function render_field(field, x, y, w, h)
         if field_values[field.id .. "_picking"] then
             love.graphics.setColor(ui.colors.text_dim)
             love.graphics.print("Paste path or drag & drop image file:", x, y_offset, 0, 0.85)
-            local new_value, is_focused = ui.textInput(field.id .. "_input", field_values[field.id .. "_input_buffer"] or "", x, y_offset + 22, w, h * 0.8, "/path/to/image.png")
-            field_values[field.id .. "_input_buffer"] = new_value
+            local input_id = field.id .. "_input"
+            local new_value, is_focused = ui.textInput(input_id, field_values[input_id] or "", x, y_offset + 22, w, h * 0.8, "/path/to/image.png")
 
-            -- Check if user pressed Enter to confirm
-            if is_focused and love.keyboard.isDown("return") and new_value ~= "" then
-                field_values[field.id] = new_value
-                field_values[field.id .. "_picking"] = false
-                field_values[field.id .. "_input_buffer"] = ""
-            end
+            -- The textinput and keypressed handlers will update field_values[input_id]
+            -- Enter key confirmation happens in keypressed handler
         end
 
         return h + 85  -- Fixed height to prevent layout shift
@@ -392,17 +389,41 @@ end
 
 -- Handle file drag and drop
 function form.filedropped(file)
-    -- Find if we have an image upload field that's currently being picked
+    -- Get the dropped file path
+    local filepath = file:getFilename()
+
+    -- Check if it's an image file
+    local is_image = filepath:match("%.png$") or filepath:match("%.jpg$") or
+                     filepath:match("%.jpeg$") or filepath:match("%.gif$") or
+                     filepath:match("%.bmp$")
+
+    if not is_image then
+        print("Dropped file is not an image: " .. filepath)
+        return
+    end
+
+    -- Find image upload fields that are currently in picking mode
     for field_id, is_picking in pairs(field_values) do
         if field_id:match("_picking$") and is_picking then
             local base_id = field_id:gsub("_picking$", "")
-            -- Get the dropped file path
-            local filepath = file:getFilename()
             field_values[base_id] = filepath
             field_values[field_id] = false  -- Close picking mode
+            field_values[base_id .. "_input"] = ""  -- Clear input field
+            print("Image set for field " .. base_id .. ": " .. filepath)
             return
         end
     end
+
+    -- If no field is in picking mode, find the first image_upload field and set it
+    for _, field in ipairs(all_fields) do
+        if field.type == "image_upload" then
+            field_values[field.id] = filepath
+            print("Image set for field " .. field.id .. ": " .. filepath)
+            return
+        end
+    end
+
+    print("No image upload field found for dropped file")
 end
 
 return form
