@@ -1,0 +1,329 @@
+# Standard Consulting Invoice Template
+
+{
+  document: {
+    title: "Consulting Invoice"
+    version: "2.0"
+    auto_fit: true
+  }
+
+  settings: {
+    currency: "€"
+    date_format: "YYYY-MM-DD"
+    page_size: "A4"
+  }
+
+  pages: [
+    {
+      name: "invoice_main"
+
+      sections: [
+        # Header with client info and logo
+        {
+          type: "columns"
+          columns: 2
+          gap: 40
+
+          left: {
+            heading: {
+              text: "Invoice to:"
+              style: "bold"
+              size: 14
+            }
+            fields: [
+              {
+                id: "client_company"
+                label: "Company Name"
+                type: "text"
+                required: true
+                default: ""
+              }
+              {
+                id: "client_address"
+                label: "Address"
+                type: "text"
+                required: true
+                default: ""
+              }
+              {
+                id: "client_vat"
+                label: "VAT:"
+                type: "text"
+                required: true
+                default: ""
+              }
+            ]
+          }
+
+          right: {
+            logo: {
+              id: "logo"
+              type: "image_upload"
+              position: "top-right"
+              max_width: 180
+              margin: 20
+              required: false
+            }
+          }
+        }
+
+        # Invoice metadata row
+        {
+          type: "horizontal_fields"
+          style: "bold_headers"
+          spacing: "distributed"
+
+          fields: [
+            {
+              id: "invoice_number"
+              label: "Invoice no.:"
+              type: "text"
+              required: true
+              default: "NHJJ0004"
+            }
+            {
+              id: "invoice_date"
+              label: "Invoice date:"
+              type: "date"
+              required: true
+              default: "@today"
+            }
+            {
+              id: "due_date"
+              label: "Due date:"
+              type: "date"
+              required: true
+              default: "@calc(invoice_date + 30)"
+            }
+          ]
+        }
+
+        # Period section
+        {
+          type: "group"
+          spacing: 8
+
+          heading: {
+            text: "Period:"
+            style: "bold"
+          }
+
+          fields: [
+            {
+              id: "period"
+              label: ""
+              type: "text"
+              required: true
+              default: "Aug 2025"
+              placeholder: "Month Year"
+            }
+          ]
+        }
+
+        # Contractor details
+        {
+          type: "group"
+          spacing: 3
+
+          fields: [
+            {
+              id: "name"
+              label: "Name:"
+              type: "text"
+              required: true
+              default: ""
+            }
+            {
+              id: "address"
+              label: "Address:"
+              type: "text"
+              required: true
+              default: ""
+            }
+            {
+              id: "email"
+              label: "Email:"
+              type: "email"
+              required: true
+              default: ""
+            }
+            {
+              id: "phone"
+              label: "Phone:"
+              type: "tel"
+              required: true
+              default: ""
+            }
+            {
+              id: "tin"
+              label: "TIN:"
+              type: "text"
+              required: true
+              default: ""
+            }
+            {
+              id: "vat_no"
+              label: "VAT No.:"
+              type: "text"
+              required: true
+              default: ""
+            }
+          ]
+        }
+
+        # Bank details
+        {
+          type: "group"
+          spacing: 3
+
+          heading: {
+            text: "BANK DETAILS"
+            style: "bold"
+          }
+
+          fields: [
+            {
+              id: "bank"
+              label: "Bank:"
+              type: "text"
+              required: true
+              default: ""
+            }
+            {
+              id: "bank_address"
+              label: "Bank Address:"
+              type: "text"
+              required: true
+              default: ""
+            }
+            {
+              id: "account_name"
+              label: "Account Name:"
+              type: "text"
+              required: true
+              default: ""
+            }
+            {
+              id: "iban"
+              label: "IBAN:"
+              type: "text"
+              required: true
+              default: ""
+            }
+            {
+              id: "bic"
+              label: "BIC:"
+              type: "text"
+              required: true
+              default: ""
+            }
+          ]
+        }
+
+        # Service description
+        {
+          type: "spacer"
+          height: 8
+        }
+
+        {
+          type: "group"
+          spacing: 3
+
+          fields: [
+            {
+              id: "service"
+              label: "Service:"
+              type: "textarea"
+              rows: 2
+              required: true
+              default: ""
+              placeholder: "Professional consulting services for..."
+            }
+            {
+              id: "schedule"
+              label: "Schedule:"
+              type: "text"
+              required: false
+              default: ""
+              placeholder: "08:00-17:00"
+            }
+          ]
+        }
+
+        # Billing table
+        {
+          type: "spacer"
+          height: 10
+        }
+
+        {
+          type: "table"
+          style: "bordered"
+          header_style: "bold"
+
+          columns: [
+            {
+              id: "description"
+              label: "Description"
+              type: "text"
+              width: "40%"
+              required: true
+            }
+            {
+              id: "quantity"
+              label: "Quantity"
+              type: "number"
+              width: "20%"
+              required: true
+              min: 0
+              default: 1
+            }
+            {
+              id: "rate"
+              label: "Rate (€)"
+              type: "currency"
+              width: "20%"
+              required: true
+              min: 0
+              default: 0
+            }
+            {
+              id: "amount"
+              label: "Amount (€)"
+              type: "currency"
+              width: "20%"
+              calculated: true
+              formula: "@calc(quantity * rate)"
+            }
+          ]
+
+          repeatable: true
+          min_rows: 1
+          max_rows: 20
+
+          summary: {
+            label: "TOTAL"
+            style: "bold"
+            align: "right"
+            calculated: true
+            formula: "@sum(items.amount)"
+          }
+        }
+      ]
+    }
+  ]
+
+  validation: {
+    rules: [
+      {
+        condition: "due_date >= invoice_date"
+        error: "Due date must be on or after invoice date"
+      }
+      {
+        condition: "@sum(items.amount) > 0"
+        error: "Invoice total must be greater than zero"
+      }
+    ]
+  }
+}
