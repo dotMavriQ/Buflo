@@ -3,7 +3,9 @@
 local form = {}
 local ui = require("lib.ui")
 local parser_v2 = require("buflo.core.buflo_v2_parser")
+local toml_parser = require("buflo.core.toml_parser")
 local invoice_template = require("buflo.rendering.invoice_template")
+local table_widget = require("ui.table_widget")
 
 -- State
 local profile_name = ""
@@ -24,11 +26,17 @@ function form.load(data)
         -- Load and parse profile
         local content = love.filesystem.read("profiles/" .. profile_name)
         if content then
-            profile_data = parser_v2.parse(content)
+            -- Detect format and use appropriate parser
+            local parser = parser_v2  -- default to v2
+            if profile_name:match("%.toml$") then
+                parser = toml_parser
+            end
+
+            profile_data = parser.parse(content)
 
             if profile_data then
                 -- Get all fields - we'll paginate dynamically based on screen height
-                local all_fields = parser_v2.get_all_fields(profile_data)
+                local all_fields = parser.get_all_fields(profile_data)
 
                 -- Dynamic pagination based on available screen height
                 form_pages = create_dynamic_pages(all_fields)
@@ -166,7 +174,8 @@ local function render_field(field, x, y, w, h)
         -- File picker button for image upload
         local button_text = value ~= "" and "[*] Change Image..." or "[+] Choose Image..."
         if ui.button("pick_" .. field.id, button_text, x, y, w, h) then
-            -- Toggle input mode
+            -- Use LÖVE's native file dialog (requires love.system.openURL workaround)
+            -- For now, toggle input mode for paste
             field_values[field.id .. "_picking"] = not field_values[field.id .. "_picking"]
         end
 
@@ -183,11 +192,25 @@ local function render_field(field, x, y, w, h)
         -- Show input field when in picking mode
         if field_values[field.id .. "_picking"] then
             love.graphics.setColor(ui.colors.text_dim)
-            love.graphics.print("Paste image path, then press Enter:", x, y_offset, 0, 0.85)
-            local new_value, is_focused = ui.textInput(field.id .. "_input", "", x, y_offset + 22, w, h * 0.8, "/path/to/image.png")
+            love.graphics.print("Paste path or drag & drop image file:", x, y_offset, 0, 0.85)
+            local new_value, is_focused = ui.textInput(field.id .. "_input", field_values[field.id .. "_input_buffer"] or "", x, y_offset + 22, w, h * 0.8, "/path/to/image.png")
+            field_values[field.id .. "_input_buffer"] = new_value
+
+            -- Check if user pressed Enter to confirm
+            if is_focused and love.keyboard.isDown("return") and new_value ~= "" then
+                field_values[field.id] = new_value
+                field_values[field.id .. "_picking"] = false
+                field_values[field.id .. "_input_buffer"] = ""
+            end
         end
 
         return h + 85  -- Fixed height to prevent layout shift
+    elseif field.type == "table" then
+        -- Table widget for line items
+        local table_height = table_widget.render(field.id, field, x, y, w)
+        -- Store table data in field_values
+        field_values[field.id] = table_widget.get_data(field.id)
+        return table_height
     elseif field.type == "textarea" then
         -- Multi-line text
         local new_value, is_focused = ui.textInput(field.id, value, x, y, w, h * 2, field.placeholder)
@@ -290,7 +313,7 @@ function form.draw()
             if validate_page() then
                 -- Generate HTML preview
                 local html_content = generate_html_preview()
-                local preview_file = "preview_" .. profile_name:gsub("%.buflo$", "") .. ".html"
+                local preview_file = "preview_" .. profile_name:gsub("%.buflo$", ""):gsub("%.toml$", "") .. ".html"
                 love.filesystem.write(preview_file, html_content)
 
                 -- Open in browser
@@ -321,6 +344,11 @@ function form.draw()
 end
 
 function form.textinput(text)
+    -- Let table widget handle table cell input first
+    if table_widget.handle_textinput(text) then
+        return
+    end
+
     -- Handle text input for focused field
     if ui.focused_widget then
         local current_value = field_values[ui.focused_widget] or ""
@@ -329,6 +357,11 @@ function form.textinput(text)
 end
 
 function form.keypressed(key, scancode, isrepeat)
+    -- Let table widget handle table cell keyboard input first
+    if table_widget.handle_keypressed(key) then
+        return
+    end
+
     -- Handle backspace for focused field
     if ui.focused_widget and key == "backspace" then
         local current_value = field_values[ui.focused_widget] or ""
@@ -354,6 +387,21 @@ function form.keypressed(key, scancode, isrepeat)
     -- Tab to next field
     if key == "tab" then
         -- TODO: Implement tab navigation
+    end
+end
+
+-- Handle file drag and drop
+function form.filedropped(file)
+    -- Find if we have an image upload field that's currently being picked
+    for field_id, is_picking in pairs(field_values) do
+        if field_id:match("_picking$") and is_picking then
+            local base_id = field_id:gsub("_picking$", "")
+            -- Get the dropped file path
+            local filepath = file:getFilename()
+            field_values[base_id] = filepath
+            field_values[field_id] = false  -- Close picking mode
+            return
+        end
     end
 end
 

@@ -91,7 +91,7 @@ function getProfileList()
     local items = love.filesystem.getDirectoryItems("profiles")
 
     for _, item in ipairs(items) do
-        if item:match("%.buflo$") then
+        if item:match("%.buflo$") or item:match("%.toml$") then
             table.insert(profiles, item)
         end
     end

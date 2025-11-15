@@ -1,6 +1,8 @@
 -- buflo/rendering/section_renderer.lua
 -- Renders sections according to DSL layout specifications
 
+local table_renderer = require("buflo.rendering.table_renderer")
+
 local M = {}
 
 -- Render a heading
@@ -187,10 +189,7 @@ end
 
 -- Render a table section (placeholder for now)
 function M.render_table(section, field_values)
-  local html = '<div class="table-section">'
-  html = html .. '<p><em>Table rendering coming soon...</em></p>'
-  html = html .. '</div>'
-  return html
+  return table_renderer.render_table(section, field_values)
 end
 
 -- Main section dispatcher

@@ -250,6 +250,12 @@ function parser.extract_fields_from_section(section, fields)
         end
     end
 
+    -- Table sections (add the whole section as a field, not individual columns)
+    if section.type == "table" then
+        table.insert(fields, section)
+        return
+    end
+
     -- Column layouts
     if section.left then
         if section.left.fields then
@@ -267,13 +273,6 @@ function parser.extract_fields_from_section(section, fields)
             for _, field in ipairs(section.right.fields) do
                 table.insert(fields, field)
             end
-        end
-    end
-
-    -- Table columns (only if it's an array, not a number)
-    if section.type == "table" and type(section.columns) == "table" then
-        for _, col in ipairs(section.columns) do
-            table.insert(fields, col)
         end
     end
 end
