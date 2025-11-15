@@ -1,449 +1,1417 @@
-# BUFLO — Billing Unified Flow Language & Orchestrator
+# BUFLO — Billing Unified Flow Language & Orchestrator# BUFLO — Billing Unified Flow Language & Orchestrator
 
-A desktop billing application written in Lua that uses a profile-based DSL to define invoice workflows. Generate professional invoices with dynamic forms, HTML rendering, PDF export, and batch processing.
 
-**Profile Formats**: `.buflo` (JSON-like DSL, recommended) or `.bpl.lua` (Lua-based)
-**GUI**: SDL2 (fully working!) with beautiful forms and welcome screen
-**Batch Mode**: Works great without any GUI!
 
-## Features
+![buflo logo](assets/buflo.png)![buflo logo](https://github.com/dotMavriQ/Buflo/blob/main/buflo.png?raw=true)
 
-- **Two Profile Formats**:
-  - **`.buflo` (NEW!)** — Simple JSON-like DSL with special values (@today, @uuid), computed fields, and no code required
-  - **`.bpl.lua`** — Lua-based profiles with programmatic control (legacy format)
-- **SDL2 GUI**: Beautiful form editor with welcome screen, profile selection, and dynamic forms
-- **Dynamic Forms**: Auto-generated from profile field definitions with proper types and validation
-- **HTML → PDF**: Professional PDF generation via wkhtmltopdf
-- **Template Interpolation**: `{{field}}` syntax with helpers (@currency, @date) and conditionals ({{#if}})
-- **Computed Fields**: Automatic calculation with dependency resolution (@calc expressions)
-- **Special Values**: @today, @uuid, @now, @calc() for dynamic defaults
-- **Batch Processing**: Generate multiple invoices from JSON/CSV data
-- **Cross-Platform**: Linux-first with portable design
-- **Secure**: Sandboxed profile execution prevents arbitrary code execution
 
-## Architecture
+
+A modern desktop billing application written in Lua with LÖVE2D. Create professional invoices using a simple JSON-like DSL, with dynamic forms, validation, and a beautiful Gruvbox-themed interface.A modern desktop billing application written in Lua with LÖVE2D. Create professional invoices using a simple JSON-like DSL, with dynamic forms, validation, and a beautiful Gruvbox-themed interface.
+
+
+
+**Current Version**: 2.0 (LÖVE2D GUI with Gruvbox Dark Material theme)**Current Version**: 2.0 (LÖVE2D GUI with Gruvbox Dark Material theme)
+
+
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+
+
+## 🚀 Quick Start## 🚀 Quick Start
+
+
+
+```bash```bash
+
+# Install dependencies (Fedora)# Install dependencies (Fedora)
+
+sudo dnf install lua lovesudo dnf install lua love
+
+
+
+# Or (Debian/Ubuntu)# Or (Debian/Ubuntu)
+
+sudo apt install lua5.4 lovesudo apt install lua5.4 love
+
+
+
+# Launch BUFLO# Launch BUFLO
+
+cd /path/to/Buflocd /path/to/Buflo
+
+love .love .
+
+``````
+
+
+
+Select a profile from the dropdown and start creating invoices!Select a profile from the dropdown and start creating invoices!
+
+
+
+---Select a profile from the dropdown and start creating invoices!
+
+
+
+## 📑 Table of Contents---
+
+
+
+- [Features](#-features)## 📑 Table of Contents
+
+- [Installation](#-installation)
+
+- [Usage](#-usage)- [Features](#-features)
+
+- [BUFLO DSL Reference](#-buflo-dsl-reference)- [Installation](#-installation)
+
+- [Architecture](#-architecture)- [Usage](#-usage)
+
+- [Development](#-development)- [BUFLO DSL Reference](#-buflo-dsl-reference)
+
+- [Contributing](#-contributing)- [Architecture](#-architecture)
+
+- [Current Status & Roadmap](#-current-status--roadmap)- [Development](#-development)
+
+- [License](#-license)- [Contributing](#-contributing)
+
+- [License](#-license)
+
+---
+
+---
+
+## ✨ Features
+
+## ✨ Features
+
+- **🎨 Beautiful GUI**: LÖVE2D-based interface with Gruvbox Dark Material theme
+
+- **📝 JSON-like DSL**: Simple `.buflo` format - no code required- **🎨 Beautiful GUI**: LÖVE2D-based interface with Gruvbox Dark Material theme
+
+- **🔄 Dynamic Forms**: Multi-page forms with smart pagination- **📝 JSON-like DSL**: Simple `.buflo` format - no code required
+
+- **✅ Validation**: Required fields, email/phone formats, custom rules- **🔄 Dynamic Forms**: Multi-page forms with smart pagination
+
+- **🖼️ Image Support**: Logo and attachment uploads- **✅ Validation**: Required fields, email/phone formats, custom rules
+
+- **📊 Calculated Fields**: Auto-compute totals, taxes, and more (coming soon)- **🖼️ Image Support**: Logo and attachment uploads
+
+- **🎯 Progress Tracking**: Visual progress bar through form pages- **📊 Calculated Fields**: Auto-compute totals, taxes, and more
+
+- **👁️ HTML Preview**: See rendered output before generation- **🎯 Progress Tracking**: Visual progress bar through form pages
+
+- **Cross-Platform**: Runs on Linux, macOS, Windows- **👁️ HTML Preview**: See rendered output before generation
+
+- **🌈 Syntax Highlighting**: (Coming soon for profile editor)
+
+---- **Cross-Platform**: Runs on Linux, macOS, Windows
+
+
+
+## 📦 Installation- **Cross-Platform**: Runs on Linux, macOS, Windows
+
+
+
+### System Requirements---
+
+
+
+- **Lua 5.4+**## 📦 Installation
+
+- **LÖVE 11.5+** (Mysterious Mysteries)
+
+- **Git** (for cloning)### System Requirements
+
+
+
+### Linux- **Lua 5.4+**
+
+- **LÖVE 11.5+** (Mysterious Mysteries)
+
+**Fedora:**- **Git** (for cloning)
+
+```bash
+
+sudo dnf install lua love git### Linux
 
 ```
-buflo/
-├── buflo.lua                    # Main CLI entry point
-├── profiles/
-│   ├── *.buflo                 # JSON-like profile format (recommended)
-│   └── *.bpl.lua               # Lua profile format (legacy)
-├── buflo/
-│   ├── core/
-│   │   ├── buflo_parser.lua    # .buflo DSL parser ✨NEW
-│   │   ├── profile.lua         # Profile loader (both formats)
-│   │   ├── render.lua          # HTML rendering with helpers
-│   │   └── pdf.lua             # PDF generation
-│   ├── gui_sdl/                # SDL2 GUI (fully working!)
-│   │   ├── welcome.lua         # Welcome screen with profile selection
-│   │   ├── main.lua            # Form editor
-│   │   ├── form.lua            # Dynamic form builder
-│   │   └── widgets.lua         # UI widgets
-│   ├── batch/
-│   │   └── runner.lua          # Batch processing
-│   └── util/
-│       ├── log.lua             # Leveled logging
-│       └── fs.lua              # File system utilities
-├── data/                        # Batch data (JSON/CSV)
-├── out/                         # Generated PDFs
-└── tests/
-    ├── test_parser.lua          # .buflo parser tests ✨NEW
-    └── test_buflo_gui.lua       # GUI integration tests ✨NEW
-```
-
-## Installation
-
-### Dependencies
 
 **Fedora:**
-```bash
-sudo dnf install lua SDL2-devel SDL2_ttf-devel SDL2_image-devel
 
-# For PDF generation (optional - only needed for final output)
-sudo dnf install wkhtmltopdf qpdf
+**Debian/Ubuntu:**```bash
+
+```bashsudo dnf install lua love git
+
+sudo apt install lua5.4 love git```
+
 ```
 
 **Debian/Ubuntu:**
-```bash
-sudo apt install lua5.4 libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
 
-# For PDF generation (optional)
-sudo apt install wkhtmltopdf qpdf
+**Arch:**```bash
+
+```bashsudo apt install lua5.4 love git
+
+sudo pacman -S lua love git```
+
 ```
 
-### SDL2 Lua Bindings
+**Arch:**
+
+### macOS```bash
+
+sudo pacman -S lua love git
+
+```bash```
+
+brew install lua love git
+
+```### macOS
+
+
+
+### Windows```bash
+
+brew install lua love git
+
+1. Download Lua from [lua.org](https://www.lua.org/download.html)```
+
+2. Download LÖVE from [love2d.org](https://love2d.org/)
+
+3. Install Git from [git-scm.com](https://git-scm.com/)### Windows
+
+
+
+### Clone Repository1. Download Lua from [lua.org](https://www.lua.org/download.html)
+
+2. Download LÖVE from [love2d.org](https://love2d.org/)
+
+```bash3. Install Git from [git-scm.com](https://git-scm.com/)
+
+git clone https://github.com/dotMavriQ/Buflo.git
+
+cd Buflo### Clone Repository
+
+```
 
 ```bash
-# Install lua-sdl2 (easy!)
+
+### Verify Installationgit clone https://github.com/YOUR_USERNAME/Buflo.git
+
+cd Buflo
+
+```bash```
+
+lua -v          # Should show Lua 5.4+
+
+love --version  # Should show LÖVE 11.5+### Verify Installation
+
+```
+
+```bash
+
+---lua -v          # Should show Lua 5.4+
+
+love --version  # Should show LÖVE 11.5+
+
+## 🎮 Usage```
+
+
+
+### Launch Welcome Screen---
+
+
+
+```bash## 🎮 Usage
+
+cd /path/to/Buflo
+
+love .### Launch Welcome Screen
+
+```
+
+```bash
+
+The welcome screen allows you to:cd /path/to/Buflo
+
+- **Load Profile**: Select from dropdown and open formlove .
+
+- **Create Profile**: Start a new `.buflo` file (coming soon)```
+
+- **Edit Profile**: Modify existing profile (coming soon)
+
+- **Delete Profile**: Remove profile from disk (coming soon)The welcome screen allows you to:
+
+- **Load Profile**: Select from dropdown and open form
+
+### Fill Out Invoice Form- **Create Profile**: Start a new `.buflo` file
+
+- **Edit Profile**: Modify existing profile
+
+1. **Navigate Pages**: Use Next/Previous buttons- **Delete Profile**: Remove profile from disk
+
+2. **Fill Required Fields**: Marked with red asterisk (*)
+
+3. **Upload Images**: Click [+] to choose logo/attachments### Fill Out Invoice Form
+
+4. **Review Progress**: Yellow bar shows completion
+
+5. **Submit**: Click "Generate HTML" to preview1. **Navigate Pages**: Use Next/Previous buttons
+
+2. **Fill Required Fields**: Marked with red asterisk (*)
+
+### Form Field Types3. **Upload Images**: Click [+] to choose logo/attachments
+
+4. **Review Progress**: Yellow bar shows completion
+
+- **Text**: Single-line input (name, address, etc.)5. **Submit**: Click "Generate HTML" to preview
+
+- **Textarea**: Multi-line input (descriptions, notes)
+
+- **Number**: Numeric values (quantities, rates)### Form Field Types
+
+- **Date**: Date picker (invoice date, due date)
+
+- **Email**: Email with validation- **Text**: Single-line input (name, address, etc.)
+
+- **Image Upload**: File picker for logos/attachments- **Textarea**: Multi-line input (descriptions, notes)
+
+- **Number**: Numeric values (quantities, rates)
+
+### Keyboard Shortcuts- **Date**: Date picker (invoice date, due date)
+
+- **Email**: Email with validation
+
+- **Tab**: Next field- **Image Upload**: File picker for logos/attachments
+
+- **Shift+Tab**: Previous field
+
+- **Enter**: Next page (if valid)### Keyboard Shortcuts
+
+- **Esc**: Quit application
+
+- **Tab**: Next field
+
+---- **Shift+Tab**: Previous field
+
+- **Enter**: Next page (if valid)
+
+## 📚 BUFLO DSL Reference- **Esc**: Quit application
+
+
+
+The `.buflo` format is a simple JSON-like configuration language for defining invoice layouts.---
+
+
+
+### Basic Structure## 📚 BUFLO DSL Reference
+
+
+
+```javascriptThe `.buflo` format is a simple JSON-like configuration language for defining invoice layouts.
+
+{
+
+  # Document metadata### Basic Structure
+
+  document: {
+
+    title: "My Invoice"```javascript
+
+    version: "1.0"{
+
+  }  # Document metadata
+
+  document: {
+
+  # Pages contain sections with fields    title: "My Invoice"
+
+  pages: [    version: "1.0"
+
+    {  }
+
+      name: "invoice_page"
+
+      sections: [  # Pages contain sections with fields
+
+        {  pages: [
+
+          type: "group"    {
+
+          heading: "Client Information"      name: "invoice_page"
+
+          fields: [      sections: [
+
+            {        {
+
+              id: "client_name"          type: "group"
+
+              label: "Client Name"          heading: "Client Information"
+
+              type: "text"          fields: [
+
+              required: true            {
+
+            }              id: "client_name"
+
+          ]              label: "Client Name"
+
+        }              type: "text"
+
+      ]              required: true
+
+    }            }
+
+  ]          ]
+
+}        }
+
+```      ]
+
+    }
+
+### Field Types Reference  ]
+
+}
+
+| Type | Description | Example |```
+
+|------|-------------|---------|
+
+| `text` | Single-line text | Name, address |### Field Types Reference
+
+| `textarea` | Multi-line text | Descriptions, notes |
+
+| `number` | Numeric input | Quantity, rate || Type | Description | Example |
+
+| `date` | Date picker | Invoice date ||------|-------------|---------|
+
+| `email` | Email with validation | client@example.com || `text` | Single-line text | Name, address |
+
+| `tel` | Phone number | +1-555-0100 || `textarea` | Multi-line text | Descriptions, notes |
+
+| `image_upload` | File picker | Logo, attachments || `number` | Numeric input | Quantity, rate |
+
+| `select` | Dropdown menu | Month, category || `date` | Date picker | Invoice date |
+
+| `email` | Email with validation | client@example.com |
+
+### Section Types| `tel` | Phone number | +1-555-0100 |
+
+| `image_upload` | File picker | Logo, attachments |
+
+| Type | Description | Usage || `select` | Dropdown menu | Month, category |
+
+|------|-------------|-------|
+
+| `group` | Vertical stack of fields | Standard form sections |### Section Types
+
+| `columns` | Multi-column layout | Side-by-side content |
+
+| `horizontal_fields` | Inline fields | Invoice number, date, etc. || Type | Description | Usage |
+
+| `table` | Repeating rows | Line items (coming soon) ||------|-------------|-------|
+
+| `spacer` | Empty space | Add vertical spacing || `group` | Vertical stack of fields | Standard form sections |
+
+| `columns` | Multi-column layout | Side-by-side content |
+
+### Special Values| `horizontal_fields` | Inline fields | Invoice number, date, etc. |
+
+| `table` | Repeating rows | Line items |
+
+```javascript| `spacer` | Empty space | Add vertical spacing |
+
+{
+
+  id: "invoice_date"### Special Values
+
+  type: "date"
+
+  default: "@today"        # Current date```javascript
+
+}{
+
+  id: "invoice_date"
+
+{  type: "date"
+
+  id: "invoice_number"  default: "@today"        # Current date
+
+  type: "text"}
+
+  default: "@uuid"         # Random UUID
+
+}{
+
+  id: "invoice_number"
+
+{  type: "text"
+
+  id: "total"  default: "@uuid"         # Random UUID
+
+  type: "number"}
+
+  calculated: true
+
+  formula: "@calc(subtotal + tax)"  # Computed value (coming soon){
+
+}  id: "total"
+
+```  type: "number"
+
+  calculated: true
+
+Available special values:  formula: "@calc(subtotal + tax)"  # Computed value
+
+- `@today` - Current date (YYYY-MM-DD)}
+
+- `@now` - Current timestamp```
+
+- `@uuid` - Random UUID v4
+
+- `@year` - Current yearAvailable special values:
+
+- `@calc(expression)` - Calculate value (coming soon)- `@today` - Current date (YYYY-MM-DD)
+
+- `@sum(array.field)` - Sum array field (coming soon)- `@now` - Current timestamp
+
+- `@uuid` - Random UUID v4
+
+### Validation Rules- `@year` - Current year
+
+- `@calc(expression)` - Calculate value
+
+```javascript- `@sum(array.field)` - Sum array field
+
+{
+
+  id: "email"### Validation Rules
+
+  type: "email"
+
+  required: true```javascript
+
+  validation: "email"      # Built-in email validation{
+
+}  id: "email"
+
+  type: "email"
+
+{  required: true
+
+  id: "vat_number"  validation: "email"      # Built-in email validation
+
+  type: "text"}
+
+  required: true
+
+  format: "vat"           # VAT format validation{
+
+}  id: "vat_number"
+
+  type: "text"
+
+{  required: true
+
+  id: "quantity"  format: "vat"           # VAT format validation
+
+  type: "number"}
+
+  required: true
+
+  min: 1                  # Minimum value{
+
+  max: 100                # Maximum value  id: "quantity"
+
+}  type: "number"
+
+```  required: true
+
+  min: 1                  # Minimum value
+
+### Complete Example  max: 100                # Maximum value
+
+}
+
+See `profiles/nordhealth_mardev.buflo` and `profiles/consulting_invoice.buflo` for full examples with:```
+
+- Multi-section layouts
+
+- Calculated fields (coming soon)### Complete Example
+
+- Image uploads
+
+- Table structures (coming soon)See `profiles/nordhealth_mardev.buflo` and `profiles/consulting_invoice.buflo` for full examples with:
+
+- Validation rules- Multi-section layouts
+
+- Calculated fields
+
+### Complete DSL Specification- Image uploads
+
+- Table structures
+
+For the full specification including layout directives, styling options, and advanced features, see [BUFLO_DSL_V2_SPEC.md](BUFLO_DSL_V2_SPEC.md).- Validation rules
+
+
+
+Key features of the DSL:### DSL Specification
+
+- **JSON-like syntax** with relaxed rules (comments, trailing commas, unquoted keys)
+
+- **Multi-line strings** with `"""`For the complete DSL specification including layout directives, styling options, and advanced features, see the [Full DSL Specification](#full-dsl-specification) section below.
+
+- **Special value generators** (@today, @uuid, @calc, @sum)
+
+- **Layout directives** (columns, horizontal_fields, table, spacer)---
+
+- **Styling properties** (bold, italic, size, color, align)
+
+- **Validation rules** (required, min/max, format, pattern)```
+
+- **Calculated fields** with dependency resolutionbuflo/
+
+- **Repeating sections** for tables/line items├── buflo.lua                    # Main CLI entry point
+
+├── profiles/
+
+---│   ├── *.buflo                 # JSON-like profile format (recommended)
+
+│   └── *.bpl.lua               # Lua profile format (legacy)
+
+## 🏗️ Architecture├── buflo/
+
+│   ├── core/
+
+### Project Structure│   │   ├── buflo_parser.lua    # .buflo DSL parser ✨NEW
+
+│   │   ├── profile.lua         # Profile loader (both formats)
+
+```│   │   ├── render.lua          # HTML rendering with helpers
+
+buflo/│   │   └── pdf.lua             # PDF generation
+
+├── conf.lua                     # LÖVE configuration│   ├── gui_sdl/                # SDL2 GUI (fully working!)
+
+├── main.lua                     # Application entry point│   │   ├── welcome.lua         # Welcome screen with profile selection
+
+├── lib/│   │   ├── main.lua            # Form editor
+
+│   └── ui.lua                  # UI widgets with Gruvbox theme (371 lines)│   │   ├── form.lua            # Dynamic form builder
+
+├── screens/│   │   └── widgets.lua         # UI widgets
+
+│   ├── welcome.lua             # Welcome screen with profile selector (175 lines)│   ├── batch/
+
+│   ├── form.lua                # Multi-page form flow (449 lines)│   │   └── runner.lua          # Batch processing
+
+│   └── editor.lua              # Profile editor (placeholder, 80 lines)│   └── util/
+
+├── buflo/│       ├── log.lua             # Leveled logging
+
+│   ├── core/│       └── fs.lua              # File system utilities
+
+│   │   └── buflo_v2_parser.lua # DSL parser (280 lines)├── data/                        # Batch data (JSON/CSV)
+
+│   └── util/├── out/                         # Generated PDFs
+
+│       ├── fs.lua              # File system utilities└── tests/
+
+│       ├── log.lua             # Logging    ├── test_parser.lua          # .buflo parser tests ✨NEW
+
+│       └── shell.lua           # Shell command execution    └── test_buflo_gui.lua       # GUI integration tests ✨NEW
+
+├── profiles/```
+
+│   ├── nordhealth_mardev.buflo      # Example invoice (26 fields)
+
+│   └── consulting_invoice.buflo     # Template## Installation
+
+├── assets/
+
+│   ├── buflo.png               # Logo (300px)### Dependencies
+
+│   └── fonts/
+
+│       └── AdwaitaMono-Regular.ttf**Fedora:**
+
+└── BUFLO_DSL_V2_SPEC.md        # Complete DSL documentation```bash
+
+```sudo dnf install lua SDL2-devel SDL2_ttf-devel SDL2_image-devel
+
+
+
+### Component Overview# For PDF generation (optional - only needed for final output)
+
+sudo dnf install wkhtmltopdf qpdf
+
+**LÖVE2D Framework:**```
+
+- `conf.lua`: Window configuration (1024x768, resizable)
+
+- `main.lua`: Screen management, input routing, global helpers**Debian/Ubuntu:**
+
+```bash
+
+**UI Library (`lib/ui.lua`):**sudo apt install lua5.4 libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
+
+- Gruvbox Dark Material color palette (16 colors)
+
+- Widgets: buttons, text inputs, dropdowns, labels# For PDF generation (optional)
+
+- State management: hot/active/focused widgetssudo apt install wkhtmltopdf qpdf
+
+- Consistent styling across all components```
+
+
+
+**Screens:**### SDL2 Lua Bindings
+
+- **Welcome**: Profile selection, CRUD operations (placeholder), navigation
+
+- **Form**: Multi-page form with dynamic pagination, validation, progress tracking```bash
+
+- **Editor**: (Placeholder) Will provide syntax-highlighted DSL editing# Install lua-sdl2 (easy!)
+
 luarocks install --local lua-sdl2
 
-# Add to PATH (one-time setup)
-echo 'eval $(luarocks path --bin)' >> ~/.bashrc
-source ~/.bashrc
-```
+**Parser (`buflo/core/buflo_v2_parser.lua`):**
 
-That's it! The GUI will work perfectly.
+- Tokenizes JSON-like `.buflo` syntax# Add to PATH (one-time setup)
 
-## Usage
+- Recursive descent parsing for nested structuresecho 'eval $(luarocks path --bin)' >> ~/.bashrc
+
+- Handles arrays, objects, multi-line stringssource ~/.bashrc
+
+- Extracts all fields from pages/sections/columns/tables```
+
+
+
+**Utilities:**That's it! The GUI will work perfectly.
+
+- `fs.lua`: File operations (for future PDF generation)
+
+- `log.lua`: Leveled logging (verbose, info, error)## Usage
+
+- `shell.lua`: Command execution (for PDF tools)
 
 ### Welcome Screen (GUI)
 
+### Data Flow
+
 Launch without arguments to see the welcome screen:
-```bash
-lua buflo.lua
+
+``````bash
+
+.buflo filelua buflo.lua
+
+    ↓```
+
+Parser → Profile structure
+
+    ↓Features:
+
+Form Screen → Dynamic pages- 🦬 Buffalo mascot (because BUFLO!)
+
+    ↓- Profile selector dropdown (scans `profiles/` directory)
+
+User Input → Validation- Load, Create, Edit, Delete profile buttons
+
+    ↓- Schedule Reminder button
+
+Collected Data → HTML Preview- Beautiful SDL2 interface
+
+    ↓
+
+(Future) → PDF Generation### Direct Profile Loading (GUI)
+
 ```
-
-Features:
-- 🦬 Buffalo mascot (because BUFLO!)
-- Profile selector dropdown (scans `profiles/` directory)
-- Load, Create, Edit, Delete profile buttons
-- Schedule Reminder button
-- Beautiful SDL2 interface
-
-### Direct Profile Loading (GUI)
 
 Load a specific profile directly:
-```bash
-lua buflo.lua profiles/monthly_invoice.buflo
-```
 
-The form editor will:
-1. Auto-generate form fields from profile
-2. Populate defaults (e.g., @today → current date, @uuid → random ID)
-3. Allow editing and validation
+### Dynamic Pagination```bash
+
+lua buflo.lua profiles/monthly_invoice.buflo
+
+The form screen intelligently calculates fields per page based on:```
+
+- Available screen height (768px - 120px header - 120px buttons - 40px margin = 508px)
+
+- Field type heights:The form editor will:
+
+  - Text: 85px (label + input + spacing)1. Auto-generate form fields from profile
+
+  - Textarea: 110px (larger input area)2. Populate defaults (e.g., @today → current date, @uuid → random ID)
+
+  - Image upload: 125px (button + toggle input)3. Allow editing and validation
+
 4. Generate PDF or preview HTML
+
+This ensures optimal layout without scrolling issues.
 
 ### Batch Mode
 
+### Gruvbox Theme
+
 Process multiple invoices from JSON or CSV:
+
+All UI components use the Gruvbox Dark Material palette:```bash
+
+- **Backgrounds**: #282828 (dark0_hard), #32302f (dark0), #3c3836 (dark1), #504945 (dark2)lua buflo.lua profiles/monthly_invoice.buflo --batch --verbose
+
+- **Text**: #ebdbb2 (fg), #a89984 (gray), #665c54 (disabled)```
+
+- **Borders**: #665c54 (normal), #fabd2f (focus - yellow)
+
+- **Accents**: #83a598 (blue), #b8bb26 (green), #fabd2f (yellow), #fb4934 (red), #d3869b (purple), #fe8019 (orange)Override data source:
+
 ```bash
-lua buflo.lua profiles/monthly_invoice.buflo --batch --verbose
+
+---lua buflo.lua profiles/monthly_invoice.buflo --batch --data=data/q4_invoices.json
+
 ```
 
-Override data source:
-```bash
-lua buflo.lua profiles/monthly_invoice.buflo --batch --data=data/q4_invoices.json
-```
+## 🔧 Development
 
 Dry run (validate without generating):
-```bash
+
+### Running from Source```bash
+
 lua buflo.lua profiles/monthly_invoice.buflo --batch --dry-run
+
+```bash```
+
+cd /path/to/Buflo
+
+love .### CLI Options
+
 ```
 
-### CLI Options
-
 ```
---batch              Run in batch mode
+
+### Code Style--batch              Run in batch mode
+
 --verbose, -v        Enable verbose logging
---dry-run            Validate but don't generate PDFs
---outdir=<path>      Override output directory
---data=<file>        Override batch data source
---help, -h           Show help message
+
+- **Indentation**: 2 spaces--dry-run            Validate but don't generate PDFs
+
+- **Naming**: snake_case for variables/functions, UPPER_CASE for constants--outdir=<path>      Override output directory
+
+- **Comments**: Explain "why", not "what"--data=<file>        Override batch data source
+
+- **Line length**: Aim for 100 characters max--help, -h           Show help message
+
 ```
+
+### Adding New Features
 
 ### Exit Codes
 
-- `0` — Success
-- `1` — General error
-- `2` — Validation error
-- `3` — Render error
+**New Field Type:**
+
+1. Edit `screens/form.lua`- `0` — Success
+
+2. Add case in `render_field()` function- `1` — General error
+
+3. Handle input in `textinput()` callback- `2` — Validation error
+
+4. Update height calculation in `calculate_field_height()`- `3` — Render error
+
 - `4` — PDF generation error
-- `5` — I/O error
 
-## Profile Formats
+**New Widget:**- `5` — I/O error
 
-### Format 1: .buflo (Recommended - No Code Required!)
+1. Add to `lib/ui.lua`
 
-Simple JSON-like format that's easy to read and write. Perfect for non-programmers.
+2. Follow existing widget patterns (hot/active/focused)## Profile Formats
 
-**Example: `profiles/monthly_invoice.buflo`**
+3. Return clicked state for buttons, new value for inputs
 
-```javascript
+4. Apply Gruvbox colors consistently### Format 1: .buflo (Recommended - No Code Required!)
+
+
+
+**New Screen:**Simple JSON-like format that's easy to read and write. Perfect for non-programmers.
+
+1. Create file in `screens/`
+
+2. Define `load()`, `update()`, `draw()`, input callbacks**Example: `profiles/monthly_invoice.buflo`**
+
+3. Register in `main.lua` screens table
+
+4. Use `switchScreen(name, data)` to navigate```javascript
+
 {
-  # Profile metadata
+
+### Testing  # Profile metadata
+
   profile: "Monthly Consulting Invoice",
-  version: "1.0",
-  description: "Standard monthly billing for consulting services",
 
-  # Form fields (what the user fills in)
+**Manual Testing:**  version: "1.0",
+
+```bash  description: "Standard monthly billing for consulting services",
+
+love .  # Launch and interact with GUI
+
+```  # Form fields (what the user fills in)
+
   fields: [
-    {
-      key: "client_name",
-      label: "Client Name",
-      type: "text",
-      required: true,
-      placeholder: "Enter client company name"
-    },
-    {
-      key: "client_email",
-      label: "Client Email",
+
+**Parser Testing:**    {
+
+```bash      key: "client_name",
+
+lua -e "      label: "Client Name",
+
+local parser = require('buflo.core.buflo_v2_parser')      type: "text",
+
+local content = io.open('profiles/nordhealth_mardev.buflo'):read('*all')      required: true,
+
+local result = parser.parse(content)      placeholder: "Enter client company name"
+
+local fields = parser.get_all_fields(result)    },
+
+print('Fields found:', #fields)    {
+
+"      key: "client_email",
+
+```      label: "Client Email",
+
       type: "email",
-      placeholder: "client@example.com"
-    },
-    {
-      key: "invoice_number",
-      label: "Invoice Number",
+
+**Profile Validation:**      placeholder: "client@example.com"
+
+- Ensure all required fields have `required: true`    },
+
+- Test special values (@today, @uuid) expand correctly    {
+
+- Verify field IDs are unique      key: "invoice_number",
+
+- Check image upload paths are accessible      label: "Invoice Number",
+
       type: "text",
-      required: true,
+
+### Debugging      required: true,
+
       default: @uuid                    # ← Auto-generates random UUID
-    },
-    {
-      key: "invoice_date",
-      label: "Invoice Date",
+
+Enable LÖVE debug output:    },
+
+```bash    {
+
+love . 2>&1 | tee debug.log      key: "invoice_date",
+
+```      label: "Invoice Date",
+
       type: "date",
-      required: true,
-      default: @today                   # ← Auto-fills today's date
-    },
-    {
+
+Common issues:      required: true,
+
+- **Font missing**: Falls back to default, copy font to `assets/fonts/`      default: @today                   # ← Auto-fills today's date
+
+- **Parser errors**: Check `.buflo` syntax (commas, quotes, brackets)    },
+
+- **Widget not responding**: Check z-order and hit detection in `mousepressed()`    {
+
       key: "daily_rate",
-      label: "Daily Rate",
+
+---      label: "Daily Rate",
+
       type: "number",
-      required: true,
+
+## 🤝 Contributing      required: true,
+
       default: 500
-    },
+
+Contributions are welcome! Here's how to get started:    },
+
     {
-      key: "days",
+
+### Getting Started      key: "days",
+
       label: "Days Worked",
-      type: "number",
-      required: true,
-      default: 1
-    },
-    {
-      key: "notes",
-      label: "Additional Notes",
-      type: "multiline",
-      placeholder: "Any special terms or notes..."
-    }
-  ],
 
-  # Computed values (calculated automatically)
-  computed: {
-    subtotal: @calc(daily_rate * days),          # Multiply rate × days
-    tax: @calc(subtotal * 0.25),                 # 25% tax on subtotal
-    total: @calc(subtotal + tax)                 # Final total
-  },
+1. **Fork** the repository on GitHub      type: "number",
 
-  # Output configuration
-  output: {
-    filename: "invoice_{{invoice_number}}.pdf",  # Use {{}} for variables
-    directory: "out/"
-  },
+2. **Clone** your fork:      required: true,
 
-  # PDF pages (can have multiple pages)
+   ```bash      default: 1
+
+   git clone https://github.com/YOUR_USERNAME/Buflo.git    },
+
+   cd Buflo    {
+
+   ```      key: "notes",
+
+3. **Create** a feature branch:      label: "Additional Notes",
+
+   ```bash      type: "multiline",
+
+   git checkout -b feature/your-feature-name      placeholder: "Any special terms or notes..."
+
+   ```    }
+
+4. **Make** your changes  ],
+
+5. **Test** thoroughly:
+
+   ```bash  # Computed values (calculated automatically)
+
+   love .  # Test GUI  computed: {
+
+   ```    subtotal: @calc(daily_rate * days),          # Multiply rate × days
+
+6. **Commit** with a descriptive message:    tax: @calc(subtotal * 0.25),                 # 25% tax on subtotal
+
+   ```bash    total: @calc(subtotal + tax)                 # Final total
+
+   git commit -m "Add feature: your feature description"  },
+
+   ```
+
+7. **Push** to your fork:  # Output configuration
+
+   ```bash  output: {
+
+   git push origin feature/your-feature-name    filename: "invoice_{{invoice_number}}.pdf",  # Use {{}} for variables
+
+   ```    directory: "out/"
+
+8. **Open** a Pull Request on GitHub  },
+
+
+
+### Areas to Contribute  # PDF pages (can have multiple pages)
+
   pages: [
-    {
-      name: "Invoice",
-      template: """
-<!DOCTYPE html>
-<html>
-<head>
+
+**High Priority:**    {
+
+- 📊 Table/repeating sections widget for line items      name: "Invoice",
+
+- 📄 PDF generation integration (wkhtmltopdf, weasyprint, or native)      template: """
+
+- ✏️ Profile editor with syntax highlighting<!DOCTYPE html>
+
+- 📋 Summary review screen before PDF generation<html>
+
+- 🧮 Calculated fields (@calc, @sum)<head>
+
   <meta charset="UTF-8">
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    .header { text-align: center; border-bottom: 3px solid #0066cc; }
-    .header h1 { color: #0066cc; font-size: 2.5em; }
-    .invoice-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
-    .invoice-table th { background-color: #0066cc; color: white; padding: 15px; }
-    .invoice-table td { border: 1px solid #ddd; padding: 12px; }
+
+**Medium Priority:**  <style>
+
+- 🔍 Search functionality in profile list    body { font-family: Arial, sans-serif; margin: 40px; }
+
+- 📁 Profile categories/tags    .header { text-align: center; border-bottom: 3px solid #0066cc; }
+
+- 🎨 Theme customization    .header h1 { color: #0066cc; font-size: 2.5em; }
+
+- 🌐 Internationalization (i18n)    .invoice-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+
+- ↩️ Undo/redo in editor    .invoice-table th { background-color: #0066cc; color: white; padding: 15px; }
+
+- 📝 Create/Edit/Delete profile operations    .invoice-table td { border: 1px solid #ddd; padding: 12px; }
+
     .total-row { font-weight: bold; font-size: 1.2em; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>INVOICE</h1>
-    <div>Invoice #{{invoice_number}}</div>
-  </div>
 
-  <div style="margin: 40px 0;">
+**Nice to Have:**  </style>
+
+- 🔢 More field types (color picker, slider, rating)</head>
+
+- 📧 Email integration (send invoices)<body>
+
+- 💾 Export to other formats (JSON, CSV, ODS)  <div class="header">
+
+- 📊 Invoice analytics/reports    <h1>INVOICE</h1>
+
+- 🔗 QR code generation for payment links    <div>Invoice #{{invoice_number}}</div>
+
+- 🔄 Batch processing mode  </div>
+
+
+
+### Code Review Checklist  <div style="margin: 40px 0;">
+
     <p><strong>Bill To:</strong> {{client_name}}</p>
-    <p><strong>Email:</strong> {{client_email}}</p>
-    <p><strong>Date:</strong> {{@date(invoice_date)}}</p>
-  </div>
 
-  <table class="invoice-table">
-    <thead>
-      <tr>
-        <th>Description</th>
+Before submitting:    <p><strong>Email:</strong> {{client_email}}</p>
+
+- [ ] Code follows style guide (2 spaces, snake_case)    <p><strong>Date:</strong> {{@date(invoice_date)}}</p>
+
+- [ ] No console errors or warnings  </div>
+
+- [ ] Gruvbox theme colors used consistently
+
+- [ ] Comments added for complex logic  <table class="invoice-table">
+
+- [ ] Tested on at least one platform    <thead>
+
+- [ ] No breaking changes to existing profiles      <tr>
+
+- [ ] README updated if adding features        <th>Description</th>
+
         <th style="text-align: right;">Rate</th>
-        <th style="text-align: center;">Quantity</th>
+
+### Questions?        <th style="text-align: center;">Quantity</th>
+
         <th style="text-align: right;">Amount</th>
-      </tr>
+
+Open an issue for discussion before starting major work. We're happy to help!      </tr>
+
     </thead>
-    <tbody>
+
+For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).    <tbody>
+
       <tr>
-        <td>Professional Consulting Services</td>
+
+---        <td>Professional Consulting Services</td>
+
         <td style="text-align: right;">{{@currency(daily_rate)}}</td>
-        <td style="text-align: center;">{{days}} days</td>
+
+## 🚧 Current Status & Roadmap        <td style="text-align: center;">{{days}} days</td>
+
         <td style="text-align: right;">{{@currency(subtotal)}}</td>
-      </tr>
+
+### What's Working (v2.0)      </tr>
+
       <tr>
-        <td colspan="3" style="text-align: right;">Subtotal:</td>
-        <td style="text-align: right;">{{@currency(subtotal)}}</td>
-      </tr>
-      <tr>
-        <td colspan="3" style="text-align: right;">Tax (25%):</td>
-        <td style="text-align: right;">{{@currency(tax)}}</td>
-      </tr>
-      <tr class="total-row">
-        <td colspan="3" style="text-align: right;">TOTAL DUE:</td>
-        <td style="text-align: right;">{{@currency(total)}}</td>
-      </tr>
-    </tbody>
+
+✅ **Complete and Production-Ready:**        <td colspan="3" style="text-align: right;">Subtotal:</td>
+
+- LÖVE2D GUI with Gruvbox Dark Material theme        <td style="text-align: right;">{{@currency(subtotal)}}</td>
+
+- `.buflo` DSL v2 parser with full syntax support      </tr>
+
+- Multi-page form flow with smart pagination      <tr>
+
+- Dynamic field rendering (text, textarea, number, date, email, image_upload)        <td colspan="3" style="text-align: right;">Tax (25%):</td>
+
+- Field validation (required fields, email format)        <td style="text-align: right;">{{@currency(tax)}}</td>
+
+- Progress tracking with visual bar      </tr>
+
+- HTML preview generation      <tr class="total-row">
+
+- Profile management (load, list)        <td colspan="3" style="text-align: right;">TOTAL DUE:</td>
+
+- 26-field complex invoice profile working perfectly        <td style="text-align: right;">{{@currency(total)}}</td>
+
+- Image upload with file path input      </tr>
+
+- Responsive UI with proper layout    </tbody>
+
   </table>
 
+### In Progress
+
   {{#if notes}}
-  <div style="margin-top: 40px; padding: 20px; background: #f9f9f9; border-left: 4px solid #0066cc;">
-    <h3>Additional Notes</h3>
-    <p>{{notes}}</p>
-  </div>
-  {{/if}}
+
+⏳ **Next Sprint:**  <div style="margin-top: 40px; padding: 20px; background: #f9f9f9; border-left: 4px solid #0066cc;">
+
+- Table/repeating sections widget for line items    <h3>Additional Notes</h3>
+
+- PDF generation (wkhtmltopdf or weasyprint integration)    <p>{{notes}}</p>
+
+- Profile editor with syntax highlighting  </div>
+
+- Summary review screen  {{/if}}
+
+- Calculated fields (@calc, @sum)
 
   <div style="margin-top: 60px; text-align: center; color: #999;">
-    <p>Thank you for your business!</p>
+
+### Planned Features    <p>Thank you for your business!</p>
+
     <p>Generated with BUFLO on {{@date(@today)}}</p>
-  </div>
-</body>
-</html>
-      """
-    }
-  ]
-}
-```
 
-#### .buflo Format Features
+🔮 **Future Releases:**  </div>
 
-**Syntax:**
+- Batch processing mode</body>
+
+- Reminder system for recurring invoices</html>
+
+- Profile templates library      """
+
+- Export formats (JSON, CSV)    }
+
+- Invoice analytics  ]
+
+- Email integration}
+
+- Multi-language support```
+
+- Theme customization
+
+- Create/Edit/Delete profile operations#### .buflo Format Features
+
+
+
+### Migration Notes**Syntax:**
+
 - JSON-like but more relaxed
-- Comments with `#`
-- Unquoted keys allowed: `key: "value"` or `"key": "value"`
-- Trailing commas permitted
-- Multi-line strings with `"""`
 
-**Special Values:**
-- `@today` — Current date (YYYY-MM-DD)
+**From SDL2 to LÖVE2D (Completed Nov 2025):**- Comments with `#`
+
+- ✅ Complete rewrite using LÖVE2D framework- Unquoted keys allowed: `key: "value"` or `"key": "value"`
+
+- ✅ All SDL2 code removed (5,356 lines)- Trailing commas permitted
+
+- ✅ Gruvbox theme applied throughout- Multi-line strings with `"""`
+
+- ✅ Dynamic pagination implemented
+
+- ✅ Image upload redesigned with ASCII markers**Special Values:**
+
+- ✅ Repository cleaned and organized- `@today` — Current date (YYYY-MM-DD)
+
 - `@now` — Current timestamp (YYYY-MM-DD HH:MM:SS)
-- `@uuid` — Random UUID v4
-- `@calc(expression)` — Calculate arithmetic (e.g., `@calc(rate * hours)`)
 
-**Template Syntax:**
+**Breaking Changes:**- `@uuid` — Random UUID v4
+
+- Old `.bpl.lua` format deprecated (use `.buflo` DSL v2)- `@calc(expression)` — Calculate arithmetic (e.g., `@calc(rate * hours)`)
+
+- Batch processing temporarily disabled (will return)
+
+- PDF generation not yet integrated (HTML preview works)**Template Syntax:**
+
 - `{{field}}` — Insert field value
-- `{{@currency(amount)}}` — Format as currency ($1,234.56)
+
+---- `{{@currency(amount)}}` — Format as currency ($1,234.56)
+
 - `{{@date(field)}}` — Format as date
-- `{{@sum(field1, field2)}}` — Sum multiple fields
+
+## 📝 Changelog- `{{@sum(field1, field2)}}` — Sum multiple fields
+
 - `{{#if field}}...{{/if}}` — Conditional blocks (only show if field has value)
 
+### v2.0 (November 2025) - LÖVE2D Rewrite
+
 **Field Types:**
-- `text` — Single-line text input
-- `number` — Numeric input
-- `date` — Date picker
-- `email` — Email validation
-- `multiline` — Multi-line text area
-- `enum` — Dropdown selection
-- `file` — File picker
-- `checkbox` — Boolean checkbox
+
+**Added:**- `text` — Single-line text input
+
+- LÖVE2D framework integration- `number` — Numeric input
+
+- Gruvbox Dark Material theme (16 colors)- `date` — Date picker
+
+- Custom UI library (`lib/ui.lua`)- `email` — Email validation
+
+- Dynamic pagination based on screen height- `multiline` — Multi-line text area
+
+- Smart field height calculation- `enum` — Dropdown selection
+
+- ASCII markers for image upload ([+]/[*])- `file` — File picker
+
+- Progress bar with "X of Y" format- `checkbox` — Boolean checkbox
+
+- HTML preview before PDF generation
 
 **Computed Fields:**
-- Automatically evaluated with dependency resolution
-- Use `@calc(expression)` for calculations
-- Can reference form fields and other computed values
-- Not shown in form (calculated in background)
+
+**Changed:**- Automatically evaluated with dependency resolution
+
+- Complete GUI rewrite (SDL2 → LÖVE2D)- Use `@calc(expression)` for calculations
+
+- Form flow now multi-page with validation- Can reference form fields and other computed values
+
+- Parser handles arrays without comma separators- Not shown in form (calculated in background)
+
+- Image upload always reserves 125px (no layout shift)
 
 **Multiple Pages:**
-```javascript
-pages: [
-  { name: "Invoice", template: """...""" },
-  { name: "Terms", template: """...""" },
-  { name: "Appendix", template: """...""" }
+
+**Removed:**```javascript
+
+- SDL2 dependencies and code (5,356 lines)pages: [
+
+- Old `.bpl.lua` parser and related modules  { name: "Invoice", template: """...""" },
+
+- Batch processing (temporary)  { name: "Terms", template: """...""" },
+
+- Old profile format support  { name: "Appendix", template: """...""" }
+
 ]
-```
 
-### Format 2: .bpl.lua (Legacy - Lua-based)
+**Fixed:**```
 
-### Format 2: .bpl.lua (Legacy - Lua-based)
+- Parser finding all 26 fields (was 4 due to array bug)
 
-Profiles are Lua modules that return a table. They execute in a sandboxed environment (no `io`, `os.execute`, etc.).
+- Pagination overflow issues### Format 2: .bpl.lua (Legacy - Lua-based)
 
-**Minimal Profile:**
+- Emoji rendering (replaced with ASCII)
 
-```lua
+- Service field showing as tall textarea### Format 2: .bpl.lua (Legacy - Lua-based)
+
+
+
+---Profiles are Lua modules that return a table. They execute in a sandboxed environment (no `io`, `os.execute`, etc.).
+
+
+
+## 📜 License**Minimal Profile:**
+
+
+
+MIT License - see [LICENSE](LICENSE) file for details.```lua
+
 return {
-  name = "Simple Invoice",
+
+Copyright (c) 2025 BUFLO Contributors  name = "Simple Invoice",
+
   version = "1.0",
-  output_pattern = "out/{{invoice_number}}.pdf",
 
-  fields = {
+---  output_pattern = "out/{{invoice_number}}.pdf",
+
+
+
+## 🙏 Acknowledgments  fields = {
+
     {key="invoice_number", label="Invoice #", type="text", required=true},
-    {key="amount", label="Amount", type="number", required=true},
-  },
 
-  render = function(data, helpers)
+- **LÖVE2D** - Amazing Lua game framework ([love2d.org](https://love2d.org/))    {key="amount", label="Amount", type="number", required=true},
+
+- **Gruvbox** - Beautiful color scheme by morhetz ([github.com/morhetz/gruvbox](https://github.com/morhetz/gruvbox))  },
+
+- **Lua** - Elegant and powerful scripting language ([lua.org](https://www.lua.org/))
+
+- **Open Source Community** - For inspiration and tools  render = function(data, helpers)
+
     return string.format([[
-      <html><body>
+
+---      <html><body>
+
         <h1>Invoice %s</h1>
-        <p>Amount: %s</p>
+
+## 📞 Support        <p>Amount: %s</p>
+
       </body></html>
-    ]], helpers.esc(data.invoice_number), helpers.fmt_currency(data.amount))
-  end
-}
-```
+
+- **Issues**: [GitHub Issues](https://github.com/dotMavriQ/Buflo/issues)    ]], helpers.esc(data.invoice_number), helpers.fmt_currency(data.amount))
+
+- **Discussions**: [GitHub Discussions](https://github.com/dotMavriQ/Buflo/discussions)  end
+
+- **Documentation**: }
+
+  - [BUFLO_DSL_V2_SPEC.md](BUFLO_DSL_V2_SPEC.md) - Complete DSL specification```
+
+  - [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
 
 ### Profile Schema
 
-**Required Fields:**
-- `name` (string) — Profile display name
-- `version` (string) — Profile version
-- `output_pattern` (string) — Output path with `{{placeholders}}`
-- `fields` (array) — Field definitions for form generation
-- `render` (function) — Renders HTML from data
+---
 
-**Optional Fields:**
+**Required Fields:**
+
+## 💡 Tips & Tricks- `name` (string) — Profile display name
+
+- `version` (string) — Profile version
+
+**Faster Form Filling:**- `output_pattern` (string) — Output path with `{{placeholders}}`
+
+- Use Tab to navigate between fields- `fields` (array) — Field definitions for form generation
+
+- Required fields are marked with red *- `render` (function) — Renders HTML from data
+
+- Image uploads can be toggled between button and text input
+
+- Press Enter on last page to submit**Optional Fields:**
+
 - `trailing_pdf` (string|function) — PDF to append after main invoice
-- `validate` (function) — Custom validation logic
-- `batch` (table) — Batch processing configuration
-- `locale` (table) — Locale settings (currency, date format)
-- `assets` (table) — CSS/images to include
+
+**Creating Profiles:**- `validate` (function) — Custom validation logic
+
+- Start with `consulting_invoice.buflo` template- `batch` (table) — Batch processing configuration
+
+- Copy and modify field IDs and labels- `locale` (table) — Locale settings (currency, date format)
+
+- Test with small forms first- `assets` (table) — CSS/images to include
+
+- Use validation to prevent errors
 
 ### Field Types
 
-```lua
-fields = {
-  {key="text_field", label="Text", type="text", required=true, default="value"},
+**Customizing Theme:**
+
+- Edit `lib/ui.lua` colors table```lua
+
+- Gruvbox colors are pre-definedfields = {
+
+- Restart LÖVE after changes  {key="text_field", label="Text", type="text", required=true, default="value"},
+
   {key="number_field", label="Number", type="number", min=0, max=1000, step=1},
-  {key="date_field", label="Date", type="date", default=function() return os.date("%Y-%m-%d") end},
-  {key="notes", label="Notes", type="multiline"},
-  {key="category", label="Category", type="enum", enum={"A", "B", "C"}},
-  {key="attachment", label="File", type="file", mode="open", filter="*.pdf"},
+
+**Debugging:**  {key="date_field", label="Date", type="date", default=function() return os.date("%Y-%m-%d") end},
+
+- Check terminal output for parser errors  {key="notes", label="Notes", type="multiline"},
+
+- Use `lua -e "..."` to test parser directly  {key="category", label="Category", type="enum", enum={"A", "B", "C"}},
+
+- GTK warnings are harmless (LÖVE-related)  {key="attachment", label="File", type="file", mode="open", filter="*.pdf"},
+
   {key="accepted", label="Accepted", type="checkbox"},
-}
+
+---}
+
 ```
+
+## 🐛 Known Issues
 
 ### Render Helpers
 
-Available in `render(data, helpers)`:
+- PDF generation not yet integrated (HTML preview works)
 
-- `helpers.esc(str)` — HTML escape
-- `helpers.fmt_currency(amount, currency)` — Format as currency
-- `helpers.fmt_date(date, format)` — Format date
-- `helpers.table_sum(array, key)` — Sum field in array
+- Table/repeating sections not implementedAvailable in `render(data, helpers)`:
 
-### Interpolation
+- Profile editor is placeholder
 
-Any string with `{{key}}` is replaced by `data[key]`:
+- Batch mode temporarily disabled- `helpers.esc(str)` — HTML escape
 
-```lua
+- Create/Edit/Delete profile operations not yet implemented- `helpers.fmt_currency(amount, currency)` — Format as currency
+
+- Calculated fields (@calc, @sum) not yet working- `helpers.fmt_date(date, format)` — Format date
+
+- Some GTK warnings on Linux (harmless, LÖVE-related)- `helpers.table_sum(array, key)` — Sum field in array
+
+
+
+Report issues at: [GitHub Issues](https://github.com/dotMavriQ/Buflo/issues)### Interpolation
+
+
+
+---Any string with `{{key}}` is replaced by `data[key]`:
+
+
+
+## 🎯 Project Goals```lua
+
 output_pattern = "out/{{client.name}}_{{invoice_number}}.pdf"
-```
 
-Supports nested keys: `{{client.address.city}}`
+BUFLO aims to make invoice generation:```
 
-Missing keys produce: `__MISSING_key__`
+- **Simple**: No coding required, just fill forms
 
-### Batch Processing
+- **Beautiful**: Professional-looking output with Gruvbox themeSupports nested keys: `{{client.address.city}}`
 
-```lua
+- **Flexible**: Customizable via DSL
+
+- **Fast**: Quick form filling with smart defaultsMissing keys produce: `__MISSING_key__`
+
+- **Reliable**: Validation prevents errors
+
+- **Open**: MIT licensed, community-driven### Batch Processing
+
+
+
+---```lua
+
 batch = {
-  enabled = true,
+
+**Built with ❤️ for the Lua and open source community**  enabled = true,
+
   source = "data/invoices.json",
   map = function(row)
     -- Transform row if needed
