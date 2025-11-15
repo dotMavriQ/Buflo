@@ -1,8 +1,5 @@
 -- BUFLO - Main LÖVE2D Entry Point
 
--- Load core modules
-local buflo_parser = require("buflo.core.buflo_parser")
-
 -- Load screens
 local welcome_screen = require("screens.welcome")
 local editor_screen = require("screens.editor")
