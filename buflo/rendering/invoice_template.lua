@@ -30,6 +30,13 @@ local function generate_css()
       padding: 15px;
     }
 
+    /* Page 1 container - contains all invoice content */
+    .invoice-page-1 {
+      max-height: 267mm; /* A4 height (297mm) minus margins (30mm) */
+      overflow: visible;
+      page-break-after: always;
+    }
+
     h1 {
       font-size: 20pt;
       font-weight: 600;
@@ -283,6 +290,11 @@ local function generate_css()
         line-height: 1.3;
       }
 
+      .invoice-page-1 {
+        page-break-after: always;
+        page-break-inside: avoid;
+      }
+
       h1 {
         font-size: 18pt;
         margin-bottom: 6px;
@@ -382,7 +394,8 @@ function M.generate_invoice_html(profile_data, field_values)
   </style>
 </head>
 <body>
-  <h1>]] .. title .. [[</h1>
+  <div class="invoice-page-1">
+    <h1>]] .. title .. [[</h1>
 ]]
 
   -- Render all sections from all pages
@@ -397,6 +410,8 @@ function M.generate_invoice_html(profile_data, field_values)
   end
 
   html = html .. [[
+  </div>
+  <!-- Page 2 and beyond can be added here -->
 </body>
 </html>
 ]]
