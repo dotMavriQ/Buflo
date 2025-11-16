@@ -2,7 +2,6 @@
 
 local form = {}
 local ui = require("lib.ui")
-local parser_v2 = require("buflo.core.buflo_v2_parser")
 local toml_parser = require("buflo.core.toml_parser")
 local invoice_template = require("buflo.rendering.invoice_template")
 local table_widget = require("ui.table_widget")
@@ -26,20 +25,14 @@ function form.load(data)
     pdf_validated = false  -- Reset PDF validation state
 
     if profile_name ~= "" then
-        -- Load and parse profile
+        -- Load and parse TOML profile
         local content = love.filesystem.read("profiles/" .. profile_name)
         if content then
-            -- Detect format and use appropriate parser
-            local parser = parser_v2  -- default to v2
-            if profile_name:match("%.toml$") then
-                parser = toml_parser
-            end
-
-            profile_data = parser.parse(content)
+            profile_data = toml_parser.parse(content)
 
             if profile_data then
                 -- Get all fields - we'll paginate dynamically based on screen height
-                all_fields = parser.get_all_fields(profile_data)
+                all_fields = toml_parser.get_all_fields(profile_data)
 
                 -- Dynamic pagination based on available screen height
                 form_pages = create_dynamic_pages(all_fields)
@@ -344,31 +337,50 @@ function form.draw()
             end
         end
 
+        -- Show status message if PDF is validated
+        if pdf_validated then
+            love.graphics.setColor(ui.colors.success)
+            local status_text = "✓ Merge successful, time to Preview & Print"
+            local button_x_start = w - 40 - 200 - 10 - 150
+            love.graphics.print(status_text, button_x_start, button_y - 30)
+        end
+
         -- Show buttons based on PDF state
         local button_x_start = w - 40 - 200 - 10 - 150
 
-        -- Merge PDFs button (only enabled when PDF is attached)
-        local merge_button_color = has_pdf and ui.colors.warning or ui.colors.text_dim
-        love.graphics.setColor(merge_button_color)
-        if ui.button("merge_pdf", "🔗 Merge PDFs", button_x_start, button_y, 150, button_h) then
-            if has_pdf and pdf_path then
-                -- Validate PDF by trying to convert it
-                local temp_prefix = os.tmpname():gsub("/tmp/", "")
-                local test_cmd = string.format("pdftoppm -png -r 150 -f 1 -l 1 '%s' /tmp/test_%s 2>&1", pdf_path, temp_prefix)
-                local handle = io.popen(test_cmd)
-                local result = handle:read("*a")
-                handle:close()
+        -- Merge PDFs button (only enabled when PDF is attached and not yet validated)
+        if has_pdf and not pdf_validated then
+            if ui.accentButton("merge_pdf", "🔗 Merge PDFs", button_x_start, button_y, 150, button_h) then
+                if pdf_path then
+                    -- Validate PDF by trying to convert it
+                    local temp_prefix = os.tmpname():gsub("/tmp/", "")
+                    local test_cmd = string.format("pdftoppm -png -r 150 -f 1 -l 1 '%s' /tmp/test_%s 2>&1", pdf_path, temp_prefix)
+                    local handle = io.popen(test_cmd)
+                    local result = handle:read("*a")
+                    handle:close()
 
-                if result:match("Error") or result:match("Unable") then
-                    print("PDF validation failed: " .. result)
-                    pdf_validated = false
-                else
-                    print("PDF validated successfully: " .. pdf_path)
-                    pdf_validated = true
-                    -- Clean up test file
-                    os.execute("rm -f /tmp/test_" .. temp_prefix .. "*")
+                    if result:match("Error") or result:match("Unable") then
+                        print("PDF validation failed: " .. result)
+                        pdf_validated = false
+                    else
+                        print("PDF validated successfully: " .. pdf_path)
+                        pdf_validated = true
+                        -- Clean up test file
+                        os.execute("rm -f /tmp/test_" .. temp_prefix .. "*")
+                    end
                 end
             end
+        else
+            -- Disabled Merge button (already validated or no PDF)
+            love.graphics.setColor(0.3, 0.3, 0.3)
+            love.graphics.rectangle("fill", button_x_start, button_y, 150, button_h, 4, 4)
+            love.graphics.setColor(0.5, 0.5, 0.5)
+            love.graphics.rectangle("line", button_x_start + 0.5, button_y + 0.5, 150 - 1, button_h - 1, 4, 4)
+            love.graphics.setColor(0.6, 0.6, 0.6)
+            local font = love.graphics.getFont()
+            local text = "🔗 Merge PDFs"
+            local text_width = font:getWidth(text)
+            love.graphics.print(text, button_x_start + (150 - text_width) / 2, button_y + (button_h - font:getHeight()) / 2)
         end
 
         -- Preview & Print button (only enabled when PDF is validated)
@@ -377,7 +389,7 @@ function form.draw()
                 if validate_page() then
                     -- Generate HTML preview
                     local html_content = generate_html_preview()
-                    local preview_file = "preview_" .. profile_name:gsub("%.buflo$", ""):gsub("%.toml$", "") .. ".html"
+                    local preview_file = "preview_" .. profile_name:gsub("%.toml$", "") .. ".html"
                     love.filesystem.write(preview_file, html_content)
 
                     -- Open in browser (user can use Ctrl+P to print)
@@ -396,7 +408,9 @@ function form.draw()
             love.graphics.rectangle("line", w - 40 - 200 + 0.5, button_y + 0.5, 200 - 1, button_h - 1, 4, 4)
             love.graphics.setColor(0.6, 0.6, 0.6)
             local font = love.graphics.getFont()
-            love.graphics.print("👁 Preview & Print", w - 40 - 200 + 10, button_y + (button_h - font:getHeight()) / 2)
+            local text = "👁 Preview & Print"
+            local text_width = font:getWidth(text)
+            love.graphics.print(text, w - 40 - 200 + (200 - text_width) / 2, button_y + (button_h - font:getHeight()) / 2)
         end
     end
 

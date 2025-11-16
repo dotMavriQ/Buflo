@@ -38,7 +38,7 @@ ui.colors = {
     danger_hover = {1.0, 0.39, 0.37},   -- Lighter red
 
     -- Special
-    accent = {0.83, 0.60, 0.44},       -- #d3869b - Gruvbox purple
+    accent = {0.827, 0.525, 0.608},    -- #d3869b - Gruvbox purple
     orange = {0.97, 0.53, 0.24},       -- #fe8019 - Gruvbox orange
 }
 
@@ -232,6 +232,48 @@ function ui.dangerButton(id, text, x, y, w, h)
         bg_color = {0.76, 0.10, 0.17}
     elseif is_hot then
         bg_color = ui.colors.danger_hover
+        ui.hot_widget = id
+    end
+
+    -- Check for click
+    if is_hot and love.mouse.isDown(1) then
+        ui.active_widget = id
+    elseif is_active and not love.mouse.isDown(1) then
+        if is_hot then
+            clicked = true
+        end
+        ui.active_widget = nil
+    end
+
+    -- Draw button
+    love.graphics.setColor(bg_color)
+    love.graphics.rectangle("fill", x, y, w, h, 4, 4)
+
+    -- Draw text
+    love.graphics.setColor(1, 1, 1)
+    local font = love.graphics.getFont()
+    local text_width = font:getWidth(text)
+    local text_height = font:getHeight()
+    love.graphics.print(text,
+        math.floor(x + (w - text_width) / 2),
+        math.floor(y + (h - text_height) / 2))
+
+    return clicked
+end
+
+-- Accent button (purple)
+function ui.accentButton(id, text, x, y, w, h)
+    local mx, my = love.mouse.getPosition()
+    local is_hot = ui.pointInRect(mx, my, x, y, w, h)
+    local is_active = ui.active_widget == id
+    local clicked = false
+
+    -- Visual state
+    local bg_color = ui.colors.accent
+    if is_active then
+        bg_color = {0.73, 0.50, 0.34}
+    elseif is_hot then
+        bg_color = {0.93, 0.70, 0.54}
         ui.hot_widget = id
     end
 
