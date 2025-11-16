@@ -904,7 +904,7 @@ BUFLO automatically validates:
 ## Getting Help
 
 - **Documentation**: This file and README.md
-- **Examples**: Check `profiles/nordhealth_mardev_v3.toml`
+- **Examples**: Check `profiles/diamond_dogs_llc.toml` for a complete example
 - **Issues**: [GitHub Issues](https://github.com/dotMavriQ/Buflo/issues)
 
 ---

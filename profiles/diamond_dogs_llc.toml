@@ -1,0 +1,234 @@
+# Diamond Dogs LLC Invoice
+# BUFLO v3 - TOML Format
+
+[document]
+title = "Diamond Dogs LLC Invoice"
+version = "3.0"
+
+[settings]
+currency = "$"
+date_format = "YYYY-MM-DD"
+page_size = "A4"
+
+# ============================================================
+# INVOICE HEADER - Two columns with client info and logo
+# ============================================================
+
+[[section]]
+type = "columns"
+
+[[section.column]]
+heading = "Invoice to:"
+
+[[section.column.field]]
+id = "client_company"
+label = "Company Name"
+default = "Diamond Dogs LLC"
+
+[[section.column.field]]
+id = "client_address"
+label = "Address"
+default = "Mother Base, Seychelles Waters"
+
+[[section.column]]
+[[section.column.field]]
+id = "logo"
+type = "image_upload"
+label = "Company Logo (Top-Right)"
+position = "top-right"
+max_width = 180
+max_height = 100
+margin = 20
+required = false
+default = ""
+
+# ============================================================
+# INVOICE DETAILS - Horizontal row
+# ============================================================
+
+[[section]]
+type = "horizontal"
+
+[[section.field]]
+id = "invoice_number"
+label = "Invoice no."
+default = "DD-MGS-0001"
+
+[[section.field]]
+id = "invoice_date"
+label = "Invoice date"
+type = "date"
+default = "2025-11-16"
+
+[[section.field]]
+id = "due_date"
+label = "Due date"
+type = "date"
+default = "2025-12-13"
+
+# ============================================================
+# PERIOD
+# ============================================================
+
+[[section]]
+heading = "Period:"
+
+[[section.field]]
+id = "period"
+label = "Period"
+default = "Nov 2025"
+
+# ============================================================
+# CONTRACTOR DETAILS
+# ============================================================
+
+[[section]]
+
+[[section.field]]
+id = "name"
+label = "Name"
+default = "Venom Snake"
+
+[[section.field]]
+id = "address"
+label = "Address"
+default = "Mother Base, Seychelles Waters, Indian Ocean"
+
+[[section.field]]
+id = "email"
+label = "Email"
+type = "email"
+default = "boss@diamonddogs.mil"
+
+[[section.field]]
+id = "phone"
+label = "Phone"
+type = "tel"
+default = "+248-555-0184"
+
+[[section.field]]
+id = "tin"
+label = "TIN"
+default = "DD-19840911"
+
+[[section.field]]
+id = "vat_no"
+label = "VAT No."
+default = "SC-OUTER-HEAVEN"
+
+# ============================================================
+# BANK DETAILS
+# ============================================================
+
+[[section]]
+heading = "BANK DETAILS"
+
+[[section.field]]
+id = "bank"
+label = "Bank"
+default = "Militaires Sans Frontières Financial Services"
+
+[[section.field]]
+id = "bank_address"
+label = "Bank Address"
+default = "Command Platform, Mother Base, Seychelles Waters"
+
+[[section.field]]
+id = "account_name"
+label = "Account Name"
+default = "Venom Snake (Big Boss)"
+
+[[section.field]]
+id = "iban"
+label = "IBAN"
+default = "SC88 1984 0911 00000001984 01"
+
+[[section.field]]
+id = "bic"
+label = "BIC"
+default = "DDOGSMFX"
+
+# ============================================================
+# SERVICE DETAILS
+# ============================================================
+
+[[section]]
+
+[[section.field]]
+id = "service"
+label = "Service"
+default = "Private Military Consulting and Combat Operations for Nov 2025"
+
+[[section.field]]
+id = "schedule"
+label = "Schedule"
+default = "24/7 Combat Ready"
+
+# ============================================================
+# LINE ITEMS TABLE
+# ============================================================
+
+[[section]]
+type = "table"
+id = "line_items"
+
+[[section.column]]
+id = "description"
+label = "Description"
+width = "40%"
+
+[[section.column]]
+id = "quantity"
+label = "Quantity"
+type = "number"
+width = "20%"
+default = 1
+
+[[section.column]]
+id = "rate"
+label = "Rate ($)"
+type = "currency"
+width = "20%"
+default = 1984.00
+
+[[section.column]]
+id = "amount"
+label = "Amount ($)"
+type = "currency"
+width = "20%"
+formula = "@calc(quantity * rate)"
+
+[section.summary]
+label = "TOTAL"
+formula = "@sum(items.amount)"
+
+[section.defaults]
+description = "Field Operations"
+quantity = 23
+rate = 1984.00
+
+# ============================================================
+# ATTACHMENTS
+# ============================================================
+
+[[section]]
+heading = "Attachments"
+
+[[section.field]]
+id = "mission_report_pdf"
+label = "Attach Mission Report PDF"
+type = "pdf_attachment"
+required = true
+placeholder = "Drop PDF file here or click to browse"
+
+# ============================================================
+# VALIDATION RULES
+# ============================================================
+
+[[validation]]
+rule = "due_date >= invoice_date"
+error = "Due date must be on or after invoice date"
+
+[[validation]]
+rule = "sum(amount) > 0"
+error = "Invoice total must be greater than zero"

@@ -26,3 +26,6 @@ Thumbs.db
 
 # Log files
 *.log
+
+# Private profiles
+profiles/nordhealth_mardev_v3.toml
