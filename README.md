@@ -1,6 +1,6 @@
 # BUFLO — Billing Unified Flow Language & Orchestrator
 
-![buflo logo](assets/buflo.png)
+<img src="assets/buflo.png" alt="buflo logo" width="30%">
 
 A modern desktop billing application written in Lua with LÖVE2D. Create professional invoices using simple configuration files (based on TOML), with dynamic forms, table widgets, PDF attachment merging, and a beautiful Gruvbox-themed interface.
 
