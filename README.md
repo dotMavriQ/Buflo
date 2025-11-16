@@ -97,6 +97,49 @@ love --version  # Should show LÖVE 11.5+
 pdftoppm -v     # Should show Poppler version
 ```
 
+### Quick Install (Linux)
+
+```bash
+./install.sh    # Installs to ~/.local/bin/buflo
+```
+
+---
+
+## 📦 Distribution & Building
+
+### Create Distributable Packages
+
+```bash
+./build.sh
+```
+
+This creates:
+- **buflo-3.0.love** - Platform-independent (requires LÖVE runtime)
+- **buflo-3.0-linux** - Linux executable (requires poppler-utils)
+- **buflo-3.0-windows.zip** - Windows bundle with DLLs
+- **buflo-3.0-macos.dmg** - macOS application
+
+### Platform-Specific Dependencies
+
+**All Platforms:**
+- LÖVE 11.5+ runtime (included in bundled builds)
+
+**For PDF Merging Feature:**
+- **Linux**: `poppler-utils` package
+- **Windows**: Poppler binaries (included in distribution or download from [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases/))
+- **macOS**: `brew install poppler`
+
+**Note**: PDF merging is optional. Without poppler, you can still create invoices and view HTML previews.
+
+### Windows Distribution Details
+
+The Windows `.zip` includes:
+- `buflo.exe` - Main executable
+- All required LÖVE DLLs (`SDL2.dll`, `OpenAL32.dll`, `lua51.dll`, etc.)
+- `poppler/` folder with PDF tools (if included during build)
+
+**Users just unzip and run `buflo.exe`!**
+
 ---
 
 ## 🎮 Usage
@@ -311,7 +354,7 @@ All UI components use the Gruvbox Dark Material palette:
 - **Backgrounds**: #282828 (dark0_hard), #32302f (dark0), #3c3836 (dark1), #504945 (dark2)
 - **Text**: #ebdbb2 (fg), #a89984 (gray), #665c54 (disabled)
 - **Borders**: #665c54 (normal), #fabd2f (focus - yellow)
-- **Buttons**: 
+- **Buttons**:
   - Primary: #83a598 (blue)
   - Success: #b8bb26 (green)
   - Warning: #fabd2f (yellow)
