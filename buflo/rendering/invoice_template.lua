@@ -10,7 +10,7 @@ local function generate_css()
   return [[
     @page {
       size: A4;
-      margin: 15mm 20mm 15mm 20mm;
+      margin: 0;
     }
 
     * {
@@ -19,22 +19,98 @@ local function generate_css()
       box-sizing: border-box;
     }
 
+    html {
+      background: #282828; /* Gruvbox dark background */
+    }
+
     body {
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #282828; /* Gruvbox dark background */
+      margin: 0;
+      padding: 40px 0 100px 0;
+      min-height: 100vh;
+    }
+
+    /* Print button and page counter */
+    .print-controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      align-items: flex-end;
+      z-index: 1000;
+    }
+
+    .buflo-watermark {
+      opacity: 0.15;
+      filter: invert(1);
+      pointer-events: none;
+      user-select: none;
+      max-width: 180px;
+      margin-bottom: 10px;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .page-counter {
+      background: #3c3836; /* Gruvbox dark gray */
+      color: #ebdbb2; /* Gruvbox light */
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .print-button {
+      background: #d79921; /* Gruvbox yellow */
+      color: #282828;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .print-button:hover {
+      background: #fabd2f; /* Gruvbox light yellow */
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .print-button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    /* A4 page container with shadow */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      margin: 0 auto 20mm auto;
+      padding: 15mm 20mm;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      position: relative;
       font-size: 10pt;
       line-height: 1.4;
       color: #333;
-      background: white;
-      max-width: 210mm;
-      margin: 0 auto;
-      padding: 15px;
     }
 
-    /* Page 1 container - contains all invoice content */
-    .invoice-page-1 {
-      max-height: 267mm; /* A4 height (297mm) minus margins (30mm) */
-      overflow: visible;
-      page-break-after: always;
+    .page:last-child {
+      margin-bottom: 40px;
     }
 
     h1 {
@@ -274,25 +350,33 @@ local function generate_css()
     @media print {
       @page {
         size: A4;
-        margin: 10mm 15mm;
+        margin: 0;
       }
 
       html, body {
-        width: 210mm;
-        height: 297mm;
+        background: white !important;
         margin: 0;
         padding: 0;
       }
 
-      body {
-        padding: 10mm 15mm;
+      .print-controls {
+        display: none !important;
+      }
+
+      .page {
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 15mm 20mm;
+        box-shadow: none;
+        page-break-after: always;
+        page-break-inside: avoid;
         font-size: 9pt;
         line-height: 1.3;
       }
 
-      .invoice-page-1 {
-        page-break-after: always;
-        page-break-inside: avoid;
+      .page:last-child {
+        margin-bottom: 0;
       }
 
       h1 {
@@ -378,9 +462,34 @@ local function generate_css()
   ]]
 end
 
+-- Load and encode BUFLO logo as base64
+local function get_buflo_logo_base64()
+  local logo_path = "assets/buflo.png"
+  local logo_data = love.filesystem.read(logo_path)
+  if logo_data then
+    -- Convert to base64
+    local b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    local function base64_encode(data)
+      return ((data:gsub('.', function(x)
+        local r,b='',x:byte()
+        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+        return r;
+      end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c=0
+        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+        return b64:sub(c+1,c+1)
+      end)..({ '', '==', '=' })[#data%3+1])
+    end
+    return base64_encode(logo_data)
+  end
+  return nil
+end
+
 -- Generate complete HTML invoice
 function M.generate_invoice_html(profile_data, field_values)
   local title = (profile_data.document and profile_data.document.title) or "Invoice"
+  local logo_base64 = get_buflo_logo_base64()
 
   local html = [[
 <!DOCTYPE html>
@@ -394,16 +503,29 @@ function M.generate_invoice_html(profile_data, field_values)
   </style>
 </head>
 <body>
-  <div class="invoice-page-1">
+  <div class="page">
     <h1>]] .. title .. [[</h1>
 ]]
 
-  -- Render all sections from all pages
+  -- Render all sections from all pages (excluding attachment sections)
   if profile_data.pages then
     for _, page in ipairs(profile_data.pages) do
       if page.sections then
         for _, section in ipairs(page.sections) do
-          html = html .. section_renderer.render_section(section, field_values)
+          -- Skip sections that only contain pdf_attachment fields
+          local has_pdf_attachment = false
+          if section.fields then
+            for _, field in ipairs(section.fields) do
+              if field.type == "pdf_attachment" then
+                has_pdf_attachment = true
+                break
+              end
+            end
+          end
+
+          if not has_pdf_attachment then
+            html = html .. section_renderer.render_section(section, field_values)
+          end
         end
       end
     end
@@ -411,12 +533,139 @@ function M.generate_invoice_html(profile_data, field_values)
 
   html = html .. [[
   </div>
-  <!-- Page 2 and beyond can be added here -->
-</body>
-</html>
 ]]
 
-  return html
+  -- Add PDF attachment pages if any
+  local page_count = 1
+  for field_id, value in pairs(field_values) do
+    -- Check if this is a PDF attachment field with a value
+    if field_id:match("_pdf$") and value ~= "" and value ~= nil then
+      print("Processing PDF attachment: " .. value)
+
+      -- Convert PDF pages to images using pdftoppm
+      local temp_prefix = tostring(os.time())
+      local output_dir = "/tmp/buflo_pdf_" .. temp_prefix
+      os.execute("mkdir -p '" .. output_dir .. "'")
+
+      -- Escape the file path properly
+      local escaped_value = value:gsub("'", "'\\''")
+
+      -- Convert PDF to PNG images at 150 DPI (good quality for A4)
+      local cmd = string.format("pdftoppm -png -r 150 '%s' '%s/page' 2>&1", escaped_value, output_dir)
+      print("Running command: " .. cmd)
+      local handle = io.popen(cmd)
+      local result_output = ""
+      if handle then
+        result_output = handle:read("*all")
+        handle:close()
+        print("pdftoppm output: " .. result_output)
+      end
+
+      -- Find all generated PNG files
+      local pages = {}
+      local find_cmd = string.format("ls '%s'/page-*.png 2>/dev/null | sort -V", output_dir)
+      print("Finding pages: " .. find_cmd)
+      local list_handle = io.popen(find_cmd)
+      if list_handle then
+        for page_file in list_handle:lines() do
+          print("Found page: " .. page_file)
+          table.insert(pages, page_file)
+        end
+        list_handle:close()
+      end
+
+      print("Total pages found: " .. #pages)
+
+      if #pages > 0 then
+        -- Embed each page as base64 image
+        for _, page_file in ipairs(pages) do
+          page_count = page_count + 1
+
+          -- Read and encode image
+          local img_handle = io.open(page_file, "rb")
+          if img_handle then
+            local img_data = img_handle:read("*all")
+            img_handle:close()
+
+            -- Base64 encode
+            local b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+            local function base64_encode(data)
+              return ((data:gsub('.', function(x)
+                local r,b='',x:byte()
+                for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+                return r;
+              end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+                if (#x < 6) then return '' end
+                local c=0
+                for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+                return b64:sub(c+1,c+1)
+              end)..({ '', '==', '=' })[#data%3+1])
+            end
+
+            local img_base64 = base64_encode(img_data)
+            print("Encoded page " .. page_count .. ", size: " .. #img_base64)
+
+            html = html .. [[
+  <div class="page">
+    <img src="data:image/png;base64,]] .. img_base64 .. [[" style="width: 100%; height: 100%; object-fit: contain;" alt="PDF Page ]] .. (page_count - 1) .. [[">
+  </div>
+]]
+          end
+        end
+
+        -- Cleanup temp files
+        os.execute("rm -rf '" .. output_dir .. "'")
+      else
+        -- Fallback: show error if no pages were generated
+        page_count = page_count + 1
+        local filename = value:match("([^/]+)$") or value
+        html = html .. [[
+  <div class="page">
+    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+      <h2 style="color: #666; margin-bottom: 10px;">PDF Conversion Failed</h2>
+      <p style="color: #999; font-size: 12pt;">]] .. filename .. [[</p>
+      <p style="color: #999; font-size: 10pt; margin-top: 20px; font-style: italic;">
+        Check terminal for error details
+      </p>
+    </div>
+  </div>
+]]
+      end
+    end
+  end  html = html .. [[
+
+  <!-- Print controls -->
+  <div class="print-controls">
+]]
+
+  -- Add BUFLO watermark if logo is available
+  if logo_base64 then
+    html = html .. [[
+    <img src="data:image/png;base64,]] .. logo_base64 .. [[" alt="BUFLO" class="buflo-watermark">
+]]
+  end
+
+  html = html .. [[
+    <div class="controls-row">
+      <div class="page-counter">
+        📄 Page ]] .. page_count .. [[
+
+      </div>
+      <button class="print-button" onclick="window.print()">
+        🖨️ Print Document
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Update page counter with actual count
+    const pageCount = document.querySelectorAll('.page').length;
+    document.querySelector('.page-counter').textContent = '📄 Pages: ' + pageCount;
+  </script>
+</body>
+</html>
+]]  return html
 end
 
 return M

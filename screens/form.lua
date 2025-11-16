@@ -15,6 +15,7 @@ local current_page = 1
 local field_values = {}
 local validation_errors = {}
 local all_fields = {}  -- Store all fields for access in callbacks
+local pdf_validated = false  -- Track if PDF has been validated
 
 function form.load(data)
     data = data or {}
@@ -22,6 +23,7 @@ function form.load(data)
     current_page = 1
     field_values = {}
     validation_errors = {}
+    pdf_validated = false  -- Reset PDF validation state
 
     if profile_name ~= "" then
         -- Load and parse profile
@@ -202,6 +204,31 @@ local function render_field(field, x, y, w, h)
         end
 
         return h + 85  -- Fixed height to prevent layout shift
+    elseif field.type == "pdf_attachment" then
+        -- PDF attachment upload (similar to image_upload)
+        local button_text = value ~= "" and "[*] Change PDF..." or "[+] Choose PDF..."
+        if ui.button("pick_" .. field.id, button_text, x, y, w, h) then
+            field_values[field.id .. "_picking"] = not field_values[field.id .. "_picking"]
+        end
+
+        local y_offset = y + h + 8
+
+        -- Show current file if selected and not picking
+        if value ~= "" and not field_values[field.id .. "_picking"] then
+            love.graphics.setColor(ui.colors.success)
+            local short_path = value:match("([^/]+)$") or value
+            love.graphics.print("[*] Selected: " .. short_path, x, y_offset, 0, 0.9)
+        end
+
+        -- Show input field when in picking mode
+        if field_values[field.id .. "_picking"] then
+            love.graphics.setColor(ui.colors.text_dim)
+            love.graphics.print("Paste path or drag & drop PDF file:", x, y_offset, 0, 0.85)
+            local input_id = field.id .. "_input"
+            local new_value, is_focused = ui.textInput(input_id, field_values[input_id] or "", x, y_offset + 22, w, h * 0.8, "/path/to/document.pdf")
+        end
+
+        return h + 85
     elseif field.type == "table" then
         -- Table widget for line items
         local table_height = table_widget.render(field.id, field, x, y, w)
@@ -305,30 +332,71 @@ function form.draw()
             end
         end
     else
-        -- On final page, show Preview and Generate PDF buttons
-        if ui.warningButton("preview", "👁 Preview HTML", w - 40 - button_w * 2 - 10, button_y, button_w, button_h) then
-            if validate_page() then
-                -- Generate HTML preview
-                local html_content = generate_html_preview()
-                local preview_file = "preview_" .. profile_name:gsub("%.buflo$", ""):gsub("%.toml$", "") .. ".html"
-                love.filesystem.write(preview_file, html_content)
+        -- On final page, check if PDF is attached
+        local has_pdf = false
+        local pdf_path = nil
 
-                -- Open in browser
-                local save_dir = love.filesystem.getSaveDirectory()
-                local preview_path = save_dir .. "/" .. preview_file
-                print("Preview saved to:", preview_path)
-                love.system.openURL("file://" .. preview_path)
+        for field_id, value in pairs(field_values) do
+            if field_id:match("_pdf$") and value ~= "" and value ~= nil then
+                has_pdf = true
+                pdf_path = value
+                break
             end
         end
 
-        if ui.successButton("submit", "Generate PDF", w - 40 - button_w, button_y, button_w, button_h) then
-            if validate_page() then
-                -- TODO: Generate PDF directly
-                print("Generating PDF with data:")
-                for k, v in pairs(field_values) do
-                    print(k, v)
+        -- Show buttons based on PDF state
+        local button_x_start = w - 40 - 200 - 10 - 150
+
+        -- Merge PDFs button (only enabled when PDF is attached)
+        local merge_button_color = has_pdf and ui.colors.warning or ui.colors.text_dim
+        love.graphics.setColor(merge_button_color)
+        if ui.button("merge_pdf", "🔗 Merge PDFs", button_x_start, button_y, 150, button_h) then
+            if has_pdf and pdf_path then
+                -- Validate PDF by trying to convert it
+                local temp_prefix = os.tmpname():gsub("/tmp/", "")
+                local test_cmd = string.format("pdftoppm -png -r 150 -f 1 -l 1 '%s' /tmp/test_%s 2>&1", pdf_path, temp_prefix)
+                local handle = io.popen(test_cmd)
+                local result = handle:read("*a")
+                handle:close()
+
+                if result:match("Error") or result:match("Unable") then
+                    print("PDF validation failed: " .. result)
+                    pdf_validated = false
+                else
+                    print("PDF validated successfully: " .. pdf_path)
+                    pdf_validated = true
+                    -- Clean up test file
+                    os.execute("rm -f /tmp/test_" .. temp_prefix .. "*")
                 end
             end
+        end
+
+        -- Preview & Print button (only enabled when PDF is validated)
+        if pdf_validated then
+            if ui.warningButton("preview", "👁 Preview & Print", w - 40 - 200, button_y, 200, button_h) then
+                if validate_page() then
+                    -- Generate HTML preview
+                    local html_content = generate_html_preview()
+                    local preview_file = "preview_" .. profile_name:gsub("%.buflo$", ""):gsub("%.toml$", "") .. ".html"
+                    love.filesystem.write(preview_file, html_content)
+
+                    -- Open in browser (user can use Ctrl+P to print)
+                    local save_dir = love.filesystem.getSaveDirectory()
+                    local preview_path = save_dir .. "/" .. preview_file
+                    print("Preview saved to:", preview_path)
+                    print("Use Ctrl+P or Cmd+P in your browser to print")
+                    love.system.openURL("file://" .. preview_path)
+                end
+            end
+        else
+            -- Disabled button
+            love.graphics.setColor(0.3, 0.3, 0.3)
+            love.graphics.rectangle("fill", w - 40 - 200, button_y, 200, button_h, 4, 4)
+            love.graphics.setColor(0.5, 0.5, 0.5)
+            love.graphics.rectangle("line", w - 40 - 200 + 0.5, button_y + 0.5, 200 - 1, button_h - 1, 4, 4)
+            love.graphics.setColor(0.6, 0.6, 0.6)
+            local font = love.graphics.getFont()
+            love.graphics.print("👁 Preview & Print", w - 40 - 200 + 10, button_y + (button_h - font:getHeight()) / 2)
         end
     end
 
@@ -392,38 +460,43 @@ function form.filedropped(file)
     -- Get the dropped file path
     local filepath = file:getFilename()
 
-    -- Check if it's an image file
+    -- Check file type
     local is_image = filepath:match("%.png$") or filepath:match("%.jpg$") or
                      filepath:match("%.jpeg$") or filepath:match("%.gif$") or
                      filepath:match("%.bmp$")
+    local is_pdf = filepath:match("%.pdf$")
 
-    if not is_image then
-        print("Dropped file is not an image: " .. filepath)
+    if not is_image and not is_pdf then
+        print("Dropped file is not an image or PDF: " .. filepath)
         return
     end
 
-    -- Find image upload fields that are currently in picking mode
+    -- Find fields that are currently in picking mode
     for field_id, is_picking in pairs(field_values) do
         if field_id:match("_picking$") and is_picking then
             local base_id = field_id:gsub("_picking$", "")
             field_values[base_id] = filepath
             field_values[field_id] = false  -- Close picking mode
             field_values[base_id .. "_input"] = ""  -- Clear input field
-            print("Image set for field " .. base_id .. ": " .. filepath)
+            print("File set for field " .. base_id .. ": " .. filepath)
             return
         end
     end
 
-    -- If no field is in picking mode, find the first image_upload field and set it
+    -- If no field is in picking mode, find appropriate field by type
     for _, field in ipairs(all_fields) do
-        if field.type == "image_upload" then
+        if is_image and field.type == "image_upload" then
             field_values[field.id] = filepath
             print("Image set for field " .. field.id .. ": " .. filepath)
             return
+        elseif is_pdf and field.type == "pdf_attachment" then
+            field_values[field.id] = filepath
+            print("PDF set for field " .. field.id .. ": " .. filepath)
+            return
         end
     end
 
-    print("No image upload field found for dropped file")
+    print("No suitable field found for dropped file")
 end
 
 return form
