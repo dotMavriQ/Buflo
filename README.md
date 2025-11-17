@@ -509,7 +509,7 @@ Contributions are welcome! Please open an issue or pull request on GitHub.
    ```powershell
    pdftoppm -v
    ```
-   
+
 2. If not found, reinstall Poppler:
    ```powershell
    $pp = Get-ChildItem "$HOME\tools\poppler" -Recurse -Filter pdftoppm.exe |
