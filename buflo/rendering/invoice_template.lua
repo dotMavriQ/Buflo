@@ -5,6 +5,33 @@ local section_renderer = require("buflo.rendering.section_renderer")
 
 local M = {}
 
+-- Platform detection
+local function is_windows()
+  return package.config:sub(1,1) == '\\'
+end
+
+local function get_temp_dir()
+  if is_windows() then
+    return os.getenv("TEMP") or os.getenv("TMP") or "."
+  else
+    return "/tmp"
+  end
+end
+
+local function escape_path(path)
+  if is_windows() then
+    -- Windows: use double quotes, no escaping needed inside
+    return path
+  else
+    -- Linux: escape single quotes for shell
+    return path:gsub("'", "'\\''")
+  end
+end
+
+local function get_path_separator()
+  return is_windows() and "\\" or "/"
+end
+
 -- Generate CSS for A4 invoice
 local function generate_css()
   return [[
@@ -544,14 +571,27 @@ function M.generate_invoice_html(profile_data, field_values)
 
       -- Convert PDF pages to images using pdftoppm
       local temp_prefix = tostring(os.time())
-      local output_dir = "/tmp/buflo_pdf_" .. temp_prefix
-      os.execute("mkdir -p '" .. output_dir .. "'")
+      local temp_dir = get_temp_dir()
+      local sep = get_path_separator()
+      local output_dir = temp_dir .. sep .. "buflo_pdf_" .. temp_prefix
+
+      -- Create temp directory (platform-specific)
+      if is_windows() then
+        os.execute('mkdir "' .. output_dir .. '" 2>nul')
+      else
+        os.execute("mkdir -p '" .. output_dir .. "'")
+      end
 
       -- Escape the file path properly
-      local escaped_value = value:gsub("'", "'\\''")
+      local escaped_value = escape_path(value)
 
       -- Convert PDF to PNG images at 150 DPI (good quality for A4)
-      local cmd = string.format("pdftoppm -png -r 150 '%s' '%s/page' 2>&1", escaped_value, output_dir)
+      local cmd
+      if is_windows() then
+        cmd = string.format('pdftoppm -png -r 150 "%s" "%s%spage" 2>&1', escaped_value, output_dir, sep)
+      else
+        cmd = string.format("pdftoppm -png -r 150 '%s' '%s/page' 2>&1", escaped_value, output_dir)
+      end
       print("Running command: " .. cmd)
       local handle = io.popen(cmd)
       local result_output = ""
@@ -561,13 +601,22 @@ function M.generate_invoice_html(profile_data, field_values)
         print("pdftoppm output: " .. result_output)
       end
 
-      -- Find all generated PNG files
+      -- Find all generated PNG files (platform-specific)
       local pages = {}
-      local find_cmd = string.format("ls '%s'/page-*.png 2>/dev/null | sort -V", output_dir)
+      local find_cmd
+      if is_windows() then
+        find_cmd = string.format('dir /b /on "%s\\page-*.png" 2>nul', output_dir)
+      else
+        find_cmd = string.format("ls '%s'/page-*.png 2>/dev/null | sort -V", output_dir)
+      end
       print("Finding pages: " .. find_cmd)
       local list_handle = io.popen(find_cmd)
       if list_handle then
         for page_file in list_handle:lines() do
+          -- On Windows, dir only returns filename, need to prepend path
+          if is_windows() then
+            page_file = output_dir .. sep .. page_file
+          end
           print("Found page: " .. page_file)
           table.insert(pages, page_file)
         end
@@ -613,12 +662,17 @@ function M.generate_invoice_html(profile_data, field_values)
           end
         end
 
-        -- Cleanup temp files
-        os.execute("rm -rf '" .. output_dir .. "'")
+        -- Cleanup temp files (platform-specific)
+        if is_windows() then
+          os.execute('rmdir /s /q "' .. output_dir .. '" 2>nul')
+        else
+          os.execute("rm -rf '" .. output_dir .. "'")
+        end
       else
         -- Fallback: show error if no pages were generated
         page_count = page_count + 1
-        local filename = value:match("([^/]+)$") or value
+        -- Get filename (platform-agnostic)
+        local filename = value:match("([^/\\]+)$") or value
         html = html .. [[
   <div class="page">
     <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center;">

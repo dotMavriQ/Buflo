@@ -39,7 +39,7 @@ Select a profile from the dropdown and start creating invoices!
 - **🎯 Progress Tracking**: Visual progress bar through form pages
 - **👁️ HTML Preview**: See rendered output with print support
 - **🎨 Print Preview**: Gruvbox dark background with beautiful A4 page separation
-- **Cross-Platform**: Runs on Linux, macOS, Windows
+- **🖥️ Cross-Platform**: Full support for Linux, macOS, and Windows with platform-specific optimizations
 
 ---
 
@@ -77,10 +77,37 @@ brew install lua love poppler git
 
 ### Windows
 
-1. Download Lua from [lua.org](https://www.lua.org/download.html)
-2. Download LÖVE from [love2d.org](https://love2d.org/)
-3. Install Poppler from [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases/)
-4. Install Git from [git-scm.com](https://git-scm.com/)
+**PowerShell (Run as Administrator):**
+
+```powershell
+# 1. Install Lua (download from lua.org and add to PATH)
+# 2. Download and install LÖVE from love2d.org
+
+# 3. Install Poppler (pdftoppm) for PDF merging
+mkdir $HOME\tools
+
+Invoke-WebRequest `
+  -Uri "https://github.com/oschwartz10612/poppler-windows/releases/download/v24.02.0-0/Release-24.02.0-0.zip" `
+  -OutFile "$HOME\tools\poppler.zip"
+
+Expand-Archive "$HOME\tools\poppler.zip" -DestinationPath "$HOME\tools\poppler" -Force
+
+# 4. Add Poppler to PATH
+$pp = Get-ChildItem "$HOME\tools\poppler" -Recurse -Filter pdftoppm.exe |
+      Select-Object -First 1 -ExpandProperty DirectoryName
+
+$env:Path += ";$pp"
+
+# Add to permanent PATH (run in new PowerShell session)
+[Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User)
+
+# 5. Verify installation
+pdftoppm -v
+
+# 6. Install Git from git-scm.com
+```
+
+**Note**: BUFLO automatically detects Windows and uses Windows-specific commands (`dir`, `del`, `mkdir`) instead of Linux commands (`ls`, `rm`, `mkdir -p`). All path handling, quoting, and temp directory management is platform-aware.
 
 ### Clone Repository
 
@@ -126,10 +153,10 @@ This creates:
 
 **For PDF Merging Feature:**
 - **Linux**: `poppler-utils` package
-- **Windows**: Poppler binaries (included in distribution or download from [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases/))
+- **Windows**: Poppler binaries - download from [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases/) and add to PATH
 - **macOS**: `brew install poppler`
 
-**Note**: PDF merging is optional. Without poppler, you can still create invoices and view HTML previews.
+**Note**: PDF merging is optional. Without poppler, you can still create invoices and view HTML previews. BUFLO automatically detects the platform and uses appropriate commands for Windows (`dir`, `del`, `mkdir`) vs Linux/macOS (`ls`, `rm`, `mkdir -p`).
 
 ### Windows Distribution Details
 
@@ -471,7 +498,71 @@ Contributions are welcome! Please open an issue or pull request on GitHub.
 
 ---
 
-## 📜 License
+## � Troubleshooting
+
+### Windows: PDF Merging Not Working
+
+**Problem**: "Merge PDFs" button fails or shows errors
+
+**Solution**:
+1. Verify `pdftoppm` is installed and in PATH:
+   ```powershell
+   pdftoppm -v
+   ```
+   
+2. If not found, reinstall Poppler:
+   ```powershell
+   $pp = Get-ChildItem "$HOME\tools\poppler" -Recurse -Filter pdftoppm.exe |
+         Select-Object -First 1 -ExpandProperty DirectoryName
+   $env:Path += ";$pp"
+   [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User)
+   ```
+
+3. Test manually:
+   ```powershell
+   pdftoppm -png -r 150 -f 1 -l 1 "C:\path\to\test.pdf" "$env:TEMP\buflo_test"
+   ```
+
+4. Check if PNG was created:
+   ```powershell
+   Get-ChildItem "$env:TEMP\buflo_test*.png"
+   ```
+
+**Note**: BUFLO uses Windows-specific commands internally:
+- `%TEMP%` instead of `/tmp`
+- `dir /b /on` instead of `ls | sort -V`
+- `del /Q` instead of `rm -f`
+- `mkdir` instead of `mkdir -p`
+- Double quotes `"` instead of single quotes `'`
+
+### Linux: Permission Errors
+
+**Problem**: Cannot write to `/tmp` or execute commands
+
+**Solution**:
+```bash
+# Check /tmp permissions
+ls -ld /tmp
+
+# Verify poppler-utils
+pdftoppm -v
+
+# Test PDF conversion
+pdftoppm -png -r 150 -f 1 -l 1 /path/to/test.pdf /tmp/buflo_test
+```
+
+### All Platforms: LÖVE Not Found
+
+**Problem**: `love` command not recognized
+
+**Solution**:
+- **Linux**: Install via package manager (`sudo apt install love`)
+- **macOS**: `brew install love`
+- **Windows**: Download from [love2d.org](https://love2d.org/) and add to PATH
+
+---
+
+## �📜 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 

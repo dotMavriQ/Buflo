@@ -16,6 +16,19 @@ local validation_errors = {}
 local all_fields = {}  -- Store all fields for access in callbacks
 local pdf_validated = false  -- Track if PDF has been validated
 
+-- Platform helpers
+local function is_windows()
+    return love.system and love.system.getOS and love.system.getOS() == "Windows"
+end
+
+local function get_temp_dir()
+    if is_windows() then
+        return os.getenv("TEMP") or os.getenv("TMP") or "."
+    else
+        return "/tmp"
+    end
+end
+
 function form.load(data)
     data = data or {}
     profile_name = data.profile or ""
@@ -34,7 +47,7 @@ function form.load(data)
                 -- Get all fields - we'll paginate dynamically based on screen height
                 all_fields = toml_parser.get_all_fields(profile_data)
 
-                -- Dynamic pagination based on available screen height
+                -- Dynamic pagination based on screen height
                 form_pages = create_dynamic_pages(all_fields)
 
                 -- Initialize field values with defaults
@@ -353,20 +366,58 @@ function form.draw()
             if ui.accentButton("merge_pdf", "🔗 Merge PDFs", button_x_start, button_y, 150, button_h) then
                 if pdf_path then
                     -- Validate PDF by trying to convert it
-                    local temp_prefix = os.tmpname():gsub("/tmp/", "")
-                    local test_cmd = string.format("pdftoppm -png -r 150 -f 1 -l 1 '%s' /tmp/test_%s 2>&1", pdf_path, temp_prefix)
-                    local handle = io.popen(test_cmd)
-                    local result = handle:read("*a")
-                    handle:close()
+                    local temp_prefix = tostring(os.time()) .. math.random(1000, 9999)
+                    local tmp_dir = get_temp_dir()
 
-                    if result:match("Error") or result:match("Unable") then
+                    local out_prefix, sep
+                    if is_windows() then
+                        sep = "\\"
+                        out_prefix = tmp_dir .. sep .. "test_" .. temp_prefix
+                    else
+                        sep = "/"
+                        out_prefix = tmp_dir .. sep .. "test_" .. temp_prefix
+                    end
+
+                    local test_cmd
+                    if is_windows() then
+                        -- Windows: double-quote paths, no single quotes, let PATH find pdftoppm
+                        test_cmd = string.format(
+                            'pdftoppm -png -r 150 -f 1 -l 1 "%s" "%s" 2>&1',
+                            pdf_path,
+                            out_prefix
+                        )
+                    else
+                        -- Original POSIX-style behavior preserved for Linux/macOS
+                        test_cmd = string.format(
+                            "pdftoppm -png -r 150 -f 1 -l 1 '%s' '%s' 2>&1",
+                            pdf_path,
+                            out_prefix
+                        )
+                    end
+
+                    print("Running PDF validation: " .. test_cmd)
+                    local handle = io.popen(test_cmd)
+                    local result = ""
+                    if handle then
+                        result = handle:read("*a")
+                        handle:close()
+                    end
+
+                    if result:match("Error") or result:match("Unable") or result:match("failed") then
                         print("PDF validation failed: " .. result)
                         pdf_validated = false
                     else
                         print("PDF validated successfully: " .. pdf_path)
                         pdf_validated = true
-                        -- Clean up test file
-                        os.execute("rm -f /tmp/test_" .. temp_prefix .. "*")
+
+                        -- Clean up test files (platform-specific)
+                        if is_windows() then
+                            -- Use cmd.exe del with wildcard, best-effort cleanup
+                            local cleanup_cmd = string.format('del /Q "%s*.png" 2>nul', out_prefix)
+                            os.execute(cleanup_cmd)
+                        else
+                            os.execute("rm -f '" .. out_prefix .. "'*.png")
+                        end
                     end
                 end
             end
