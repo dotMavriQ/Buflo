@@ -2,6 +2,7 @@
 -- Interactive table widget for invoice line items
 
 local ui = require("lib.ui")
+local utf8 = require("utf8")
 
 local M = {}
 
@@ -374,7 +375,13 @@ function M.handle_keypressed(key)
         if key == "backspace" then
             local current_value = cell_input_buffer[ui.focused_widget] or ""
             if #current_value > 0 then
-                cell_input_buffer[ui.focused_widget] = current_value:sub(1, -2)
+                -- Use utf8.offset to find the start of the last character
+                local byteoffset = utf8.offset(current_value, -1)
+                if byteoffset then
+                    cell_input_buffer[ui.focused_widget] = current_value:sub(1, byteoffset - 1)
+                else
+                    cell_input_buffer[ui.focused_widget] = ""
+                end
             end
             return true  -- Handled
         end

@@ -1,0 +1,234 @@
+# Nordhealth Marketing & Development Invoice
+# BUFLO v3 - TOML Format
+
+[document]
+title = "Nordhealth Marketing & Development Invoice"
+version = "3.0"
+
+[settings]
+currency = "€"
+date_format = "YYYY-MM-DD"
+page_size = "A4"
+
+# ============================================================
+# INVOICE HEADER - Two columns with client info and logo
+# ============================================================
+
+[[section]]
+type = "columns"
+
+[[section.column]]
+heading = "Invoice to:"
+
+[[section.column.field]]
+id = "client_company"
+label = "Company Name"
+default = "Nordhealth Therapy Finland Oy"
+
+[[section.column.field]]
+id = "client_address"
+label = "Address"
+default = "Bulevardi 21, 00180 Helsinki, Finland"
+
+[[section.column]]
+[[section.column.field]]
+id = "logo"
+type = "image_upload"
+label = "Company Logo (Top-Right)"
+position = "top-right"
+max_width = 180
+max_height = 100
+margin = 20
+required = false
+default = ""
+
+# ============================================================
+# INVOICE DETAILS - Horizontal row
+# ============================================================
+
+[[section]]
+type = "horizontal"
+
+[[section.field]]
+id = "invoice_number"
+label = "Invoice no."
+default = "NHJJ0006"
+
+[[section.field]]
+id = "invoice_date"
+label = "Invoice date"
+type = "date"
+default = "2025-11-30"
+
+[[section.field]]
+id = "due_date"
+label = "Due date"
+type = "date"
+default = "2025-12-14"
+
+# ============================================================
+# PERIOD
+# ============================================================
+
+[[section]]
+heading = "Period:"
+
+[[section.field]]
+id = "period"
+label = "Period"
+default = "Nov 2025"
+
+# ============================================================
+# CONTRACTOR DETAILS
+# ============================================================
+
+[[section]]
+
+[[section.field]]
+id = "name"
+label = "Name"
+default = "Jonatan Oliver Jansson"
+
+[[section.field]]
+id = "address"
+label = "Address"
+default = "Calçada de São Vicente 105-1, 2645, Alcabideche, Portugal"
+
+[[section.field]]
+id = "email"
+label = "Email"
+type = "email"
+default = "Jonatan@DotMavriQ.Life"
+
+[[section.field]]
+id = "phone"
+label = "Phone"
+type = "tel"
+default = "+351927525569"
+
+[[section.field]]
+id = "tin"
+label = "TIN"
+default = "322181046"
+
+[[section.field]]
+id = "vat_no"
+label = "VAT No."
+default = "FI34867227"
+
+# ============================================================
+# BANK DETAILS
+# ============================================================
+
+[[section]]
+heading = "BANK DETAILS"
+
+[[section.field]]
+id = "bank"
+label = "Bank"
+default = "Bankinter, S.A. – Sucursal em Portugal"
+
+[[section.field]]
+id = "bank_address"
+label = "Bank Address"
+default = "Praça Marquês de Pombal, n.º 13, 2.º andar, 1250-162, Lisboa"
+
+[[section.field]]
+id = "account_name"
+label = "Account Name"
+default = "Jonatan Oliver Jansson"
+
+[[section.field]]
+id = "iban"
+label = "IBAN"
+default = "PT50 0269 0111 00200580085 66"
+
+[[section.field]]
+id = "bic"
+label = "BIC"
+default = "BKBKPTPL"
+
+# ============================================================
+# SERVICE DETAILS
+# ============================================================
+
+[[section]]
+
+[[section.field]]
+id = "service"
+label = "Service"
+default = "Professional consulting services for Nov 2025"
+
+[[section.field]]
+id = "schedule"
+label = "Schedule"
+default = "08:00–17:00"
+
+# ============================================================
+# LINE ITEMS TABLE
+# ============================================================
+
+[[section]]
+type = "table"
+id = "line_items"
+
+[[section.column]]
+id = "description"
+label = "Description"
+width = "40%"
+
+[[section.column]]
+id = "quantity"
+label = "Quantity"
+type = "number"
+width = "20%"
+default = 1
+
+[[section.column]]
+id = "rate"
+label = "Rate (€)"
+type = "currency"
+width = "20%"
+default = 213.00
+
+[[section.column]]
+id = "amount"
+label = "Amount (€)"
+type = "currency"
+width = "20%"
+formula = "@calc(quantity * rate)"
+
+[section.summary]
+label = "TOTAL"
+formula = "@sum(items.amount)"
+
+[section.defaults]
+description = "Standard Workdays"
+quantity = 23
+rate = 213.00
+
+# ============================================================
+# ATTACHMENTS
+# ============================================================
+
+[[section]]
+heading = "Attachments"
+
+[[section.field]]
+id = "timesheet_pdf"
+label = "Attach Timesheet PDF"
+type = "pdf_attachment"
+required = true
+placeholder = "Drop PDF file here or click to browse"
+
+# ============================================================
+# VALIDATION RULES
+# ============================================================
+
+[[validation]]
+rule = "due_date >= invoice_date"
+error = "Due date must be on or after invoice date"
+
+[[validation]]
+rule = "sum(amount) > 0"
+error = "Invoice total must be greater than zero"
