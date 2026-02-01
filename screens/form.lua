@@ -2,6 +2,7 @@
 
 local form = {}
 local ui = require("lib.ui")
+local utf8 = require("utf8")
 local toml_parser = require("buflo.core.toml_parser")
 local invoice_template = require("buflo.rendering.invoice_template")
 local table_widget = require("ui.table_widget")
@@ -21,12 +22,51 @@ local function is_windows()
     return love.system and love.system.getOS and love.system.getOS() == "Windows"
 end
 
+local function is_wsl()
+    local f = io.open("/proc/version", "r")
+    if f then
+        local content = f:read("*a")
+        f:close()
+        return content:lower():match("microsoft") ~= nil
+    end
+    return false
+end
+
 local function get_temp_dir()
     if is_windows() then
         return os.getenv("TEMP") or os.getenv("TMP") or "."
     else
         return "/tmp"
     end
+end
+
+-- Open a native file picker dialog (works on Linux/WSL with zenity)
+local function open_file_picker(filter_name, filter_pattern)
+    if is_windows() then
+        -- Windows doesn't have zenity, fall back to manual path entry
+        return nil
+    end
+
+    -- Try zenity first (common on Linux/WSL)
+    local cmd
+    if filter_name and filter_pattern then
+        cmd = string.format('zenity --file-selection --title="Select File" --file-filter="%s | %s" 2>/dev/null',
+            filter_name, filter_pattern)
+    else
+        cmd = 'zenity --file-selection --title="Select File" 2>/dev/null'
+    end
+
+    local handle = io.popen(cmd)
+    if handle then
+        local result = handle:read("*a")
+        handle:close()
+        -- Remove trailing newline
+        result = result:gsub("%s+$", "")
+        if result ~= "" then
+            return result
+        end
+    end
+    return nil
 end
 
 function form.load(data)
@@ -183,9 +223,17 @@ local function render_field(field, x, y, w, h)
         -- File picker button for image upload
         local button_text = value ~= "" and "[*] Change Image..." or "[+] Choose Image..."
         if ui.button("pick_" .. field.id, button_text, x, y, w, h) then
-            -- Use LÖVE's native file dialog (requires love.system.openURL workaround)
-            -- For now, toggle input mode for paste
-            field_values[field.id .. "_picking"] = not field_values[field.id .. "_picking"]
+            -- Try native file picker first
+            local picked = open_file_picker("Images", "*.png *.jpg *.jpeg *.gif *.bmp")
+            if picked then
+                field_values[field.id] = picked
+                field_values[field.id .. "_picking"] = false
+                print("Image selected via picker: " .. picked)
+            else
+                -- Fall back to manual path entry mode
+                print("DEBUG: Image button clicked for " .. field.id .. " (manual mode)")
+                field_values[field.id .. "_picking"] = not field_values[field.id .. "_picking"]
+            end
         end
 
         -- Always reserve space, but show/hide based on state
@@ -194,16 +242,18 @@ local function render_field(field, x, y, w, h)
         -- Show current file if selected and not picking
         if value ~= "" and not field_values[field.id .. "_picking"] then
             love.graphics.setColor(ui.colors.success)
-            local short_path = value:match("([^/]+)$") or value  -- Show just filename
+            local short_path = value:match("([^/\\]+)$") or value  -- Show just filename (handle both / and \)
             love.graphics.print("[*] Selected: " .. short_path, x, y_offset, 0, 0.9)
         end
 
-        -- Show input field when in picking mode
+        -- Show input field when in picking mode (fallback for when file picker unavailable)
         if field_values[field.id .. "_picking"] then
             love.graphics.setColor(ui.colors.text_dim)
-            love.graphics.print("Paste path or drag & drop image file:", x, y_offset, 0, 0.85)
+            local hint = is_wsl() and "Enter WSL path (e.g., /mnt/c/Users/.../image.png):" or "Enter file path:"
+            love.graphics.print(hint, x, y_offset, 0, 0.85)
             local input_id = field.id .. "_input"
-            local new_value, is_focused = ui.textInput(input_id, field_values[input_id] or "", x, y_offset + 22, w, h * 0.8, "/path/to/image.png")
+            local placeholder = is_wsl() and "/mnt/c/Users/.../image.png" or "/path/to/image.png"
+            local new_value, is_focused = ui.textInput(input_id, field_values[input_id] or "", x, y_offset + 22, w, h * 0.8, placeholder)
 
             -- The textinput and keypressed handlers will update field_values[input_id]
             -- Enter key confirmation happens in keypressed handler
@@ -214,7 +264,18 @@ local function render_field(field, x, y, w, h)
         -- PDF attachment upload (similar to image_upload)
         local button_text = value ~= "" and "[*] Change PDF..." or "[+] Choose PDF..."
         if ui.button("pick_" .. field.id, button_text, x, y, w, h) then
-            field_values[field.id .. "_picking"] = not field_values[field.id .. "_picking"]
+            -- Try native file picker first
+            local picked = open_file_picker("PDF Files", "*.pdf")
+            if picked then
+                field_values[field.id] = picked
+                field_values[field.id .. "_picking"] = false
+                pdf_validated = false  -- Reset validation when new PDF selected
+                print("PDF selected via picker: " .. picked)
+            else
+                -- Fall back to manual path entry mode
+                print("DEBUG: PDF button clicked for " .. field.id .. " (manual mode)")
+                field_values[field.id .. "_picking"] = not field_values[field.id .. "_picking"]
+            end
         end
 
         local y_offset = y + h + 8
@@ -222,16 +283,18 @@ local function render_field(field, x, y, w, h)
         -- Show current file if selected and not picking
         if value ~= "" and not field_values[field.id .. "_picking"] then
             love.graphics.setColor(ui.colors.success)
-            local short_path = value:match("([^/]+)$") or value
+            local short_path = value:match("([^/\\]+)$") or value  -- Handle both / and \
             love.graphics.print("[*] Selected: " .. short_path, x, y_offset, 0, 0.9)
         end
 
-        -- Show input field when in picking mode
+        -- Show input field when in picking mode (fallback for when file picker unavailable)
         if field_values[field.id .. "_picking"] then
             love.graphics.setColor(ui.colors.text_dim)
-            love.graphics.print("Paste path or drag & drop PDF file:", x, y_offset, 0, 0.85)
+            local hint = is_wsl() and "Enter WSL path (e.g., /mnt/c/Users/.../file.pdf):" or "Enter file path:"
+            love.graphics.print(hint, x, y_offset, 0, 0.85)
             local input_id = field.id .. "_input"
-            local new_value, is_focused = ui.textInput(input_id, field_values[input_id] or "", x, y_offset + 22, w, h * 0.8, "/path/to/document.pdf")
+            local placeholder = is_wsl() and "/mnt/c/Users/.../file.pdf" or "/path/to/document.pdf"
+            local new_value, is_focused = ui.textInput(input_id, field_values[input_id] or "", x, y_offset + 22, w, h * 0.8, placeholder)
         end
 
         return h + 85
@@ -496,8 +559,19 @@ function form.keypressed(key, scancode, isrepeat)
     if ui.focused_widget and key == "backspace" then
         local current_value = field_values[ui.focused_widget] or ""
         if #current_value > 0 then
-            field_values[ui.focused_widget] = current_value:sub(1, -2)
+            -- Use utf8.offset to find the start of the last character
+            local byteoffset = utf8.offset(current_value, -1)
+            if byteoffset then
+                field_values[ui.focused_widget] = current_value:sub(1, byteoffset - 1)
+            else
+                field_values[ui.focused_widget] = ""
+            end
         end
+    end
+
+    -- Handle delete key to clear entire field
+    if ui.focused_widget and key == "delete" then
+        field_values[ui.focused_widget] = ""
     end
 
     -- Handle Enter key for image upload path confirmation
